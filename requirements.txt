@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+langchain
+langgraph
+python-dotenv
+psycopg2-binary
+langchain-mcp-adapters
+fastmcp
+langchain-openai

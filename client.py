@@ -1,38 +1,35 @@
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.prebuilt import create_react_agent
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 import os
 from dotenv import load_dotenv
-from pathlib import Path
 import json
 
-env_path = Path(__file__).parent.parent / ".env"
+env_path = ".env"
 load_dotenv(env_path)
-
-api_key = os.getenv("OPENAI_API_KEY")
 
 model = ChatOpenAI(model="gpt-4o", streaming=True, verbose=True)
 
-server_params = StdioServerParameters(
-    command="python",
-    args=["app/tools.py"],
-)
-
+mcp_server_url = os.getenv("MCP_SERVER_URL")
+                           
 agent_template = """
-            Act as helpful assistant and answer the given question.
+            Act as helpful assistant that is able to get information from a database based on the users natural language query.
             The retrieved context shall be provided by one of the registered tools.
             Pick the right tool to populate the context before giving the final answer to the given question.
+            
             
             Tool calling instructions:
             
             1. Don't make any assumptions about the given question before retrieving the context. If the given question contains abbreviations or unknown words, don't try to interpret them before invoking one of the tools.
 
-            2. If the tool returns a list of items, return it as a markup list
+            2. If the tool returns a list of items, return the results as a bullet list using markdown format. Make sure there are two blank new lines before the list starts. 
 
-            3. If the tool returns a list of items, and the number of items to be retrieved is not specified by the user, use the default value of 10.
+            3. When listing items, format each item on a new line starting with a dash (-). Insert real line breaks between items using two newlines (\\n\\n), not just spaces.
+
+            4. If the tool returns a list of items, and the number of items to be retrieved is not specified by the user, use the default value of 10.
 
             Question answering instructions (after invoking the tool and retrieving the context):
             
@@ -59,7 +56,7 @@ async def run_agent(prompt: str):
     """Async generator for streaming agent responses to FastAPI"""
     try:
         print(f"User prompt: {prompt}")
-        async with stdio_client(server_params) as (read, write):
+        async with streamablehttp_client(url=mcp_server_url) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 tools = await load_mcp_tools(session)
@@ -106,8 +103,6 @@ async def run_agent(prompt: str):
     except Exception as e:
         print(f"Error in run_agent: {e}")  # Server-side logging
         yield f"data: {json.dumps({'error': str(e), 'type': 'error'})}\n\n"
-
-
 
 raw_template = """
             You are a helpful assistant. Answer the question using your own knowledge.

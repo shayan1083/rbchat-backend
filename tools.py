@@ -2,8 +2,14 @@ from mcp.server.fastmcp import FastMCP
 from settings import Settings
 from user_repository import UserRepository
 import json
+import os
+from dotenv import load_dotenv
 
-mcp = FastMCP("Math")
+env_path = ".env"
+load_dotenv(env_path)
+
+MCP_PORT =  int(os.getenv("MCP_SERVER_PORT"))
+mcp = FastMCP("RBChat", port=MCP_PORT)
 
 settings = Settings()
 
@@ -28,57 +34,6 @@ def compute_custom_score(x: int, y: int, z: int) -> float:
     }
 
     return f"Custom score calculated successfully.\n\nResult: {json.dumps(result, indent=2)}"
-
-# @mcp.tool()
-# async def get_user_count() -> str:
-#     """
-#     Returns the total user count in the database
-#     """
-#     try:
-#         user_repo = UserRepository(settings.DB_HOST, settings.DB_PORT, settings.DB_USER, settings.DB_PASSWORD, settings.DB_NAME)
-#         user_repo.connect()
-#         count = user_repo.get_user_count()
-#         return str(count)
-#     except Exception as e:
-#         return f"Failed: {e}"
-#     finally:
-#         user_repo.close()
-
-# @mcp.tool()
-# async def list_users_from_api() -> str:
-#     """
-#     Returns a list of all users in the database.
-#     """
-#     try:
-#         user_repo = UserRepository(settings.DB_HOST, settings.DB_PORT, settings.DB_USER, settings.DB_PASSWORD, settings.DB_NAME)
-#         user_repo.connect()
-#         users = user_repo.get_user_list()
-#         return str(users)
-#     except Exception as e:
-#         return f"Error fetching user list: {e}"
-#     finally:
-#         user_repo.close()
-
-# @mcp.tool()
-# async def get_high_skill_users_via_api(skill: bool) -> str:
-#     """
-#     Retrieves a list of users who are either highly skilled or not, based on the input flag.
-    
-#     Args:
-#         skill: Boolean value indicating whether to fetch highly skilled users (True) or not (False).
-    
-#     Returns:
-#         A JSON string representing the list of matched users, or an error message.
-#     """
-#     try:
-#         user_repo = UserRepository(settings.DB_HOST, settings.DB_PORT, settings.DB_USER, settings.DB_PASSWORD, settings.DB_NAME)
-#         user_repo.connect()
-#         users = user_repo.get_high_skill_users(skill)
-#         return str(users)
-#     except Exception as e:
-#         return f"Failed to fetch from API: {e}"
-#     finally:
-#         user_repo.close()
 
 @mcp.tool()
 async def get_items_by_brand_and_category(brand: str, category: str) -> str:
@@ -114,6 +69,7 @@ async def get_items_by_brand(brand: str) -> str:
         A JSON string representing the list of items from the specified brand, or an error message.
     """
     try:
+        print("Getting items by brand")
         user_repo = UserRepository(settings.DB_HOST, settings.DB_PORT, settings.DB_USER, settings.DB_PASSWORD, settings.DB_NAME)
         user_repo.connect()
         items = user_repo.get_items_by_brand(brand)
@@ -135,6 +91,7 @@ async def get_items_by_category(category: str) -> str:
         A JSON string representing the list of items from the specified category, or an error message.
     """
     try:
+        print("enter get items by category")
         user_repo = UserRepository(settings.DB_HOST, settings.DB_PORT, settings.DB_USER, settings.DB_PASSWORD, settings.DB_NAME)
         user_repo.connect()
         items = user_repo.get_items_by_category(category)
@@ -144,9 +101,29 @@ async def get_items_by_category(category: str) -> str:
     finally:
         user_repo.close()
 
-
+@mcp.tool()
+async def get_items_by_name(name: str) -> str:
+    """
+    This tool is responsible for retrieving products by name. 
+    
+    Args:
+        name: Name of the product or item. 
+    
+    Returns:
+        A JSON string representing the list of items from the specified name, or an error message.
+    """
+    try:
+        print("enter get items by name")
+        user_repo = UserRepository(settings.DB_HOST, settings.DB_PORT, settings.DB_USER, settings.DB_PASSWORD, settings.DB_NAME)
+        user_repo.connect()
+        items = user_repo.get_items_by_name(name)
+        return str(items)
+    except Exception as e:
+        return f"Failed to fetch items by name and description: {e}"
+    finally:
+        user_repo.close()
 
 
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    mcp.run(transport="streamable-http")
