@@ -13,3 +13,6 @@ venv
 
 ex_client.py
 test.py
+handler.py
+bedrock.py
+*.log

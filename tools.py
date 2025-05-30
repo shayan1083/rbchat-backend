@@ -4,36 +4,32 @@ from user_repository import UserRepository
 import json
 import os
 from dotenv import load_dotenv
+from settings import Settings
 
-env_path = ".env"
-load_dotenv(env_path)
-
-MCP_PORT =  int(os.getenv("MCP_SERVER_PORT"))
-mcp = FastMCP("RBChat", port=MCP_PORT)
 
 settings = Settings()
 
-# calculate custom score to test mcp working
+MCP_PORT =  settings.MCP_SERVER_PORT
+mcp = FastMCP("RBChat", port=MCP_PORT)
+
 @mcp.tool()
-def compute_custom_score(x: int, y: int, z: int) -> float:
+async def count_items_in_database():
     """
-    Compute a custom weighted score using the formula:
-    
-    score = ((x * 2) + (y ** 1.5) - (z * 0.42)) / (x + y + z + 1)
+    Retrieves the number of items in the database.
 
-    This score is used internally to rank experimental sensor data.
+    Returns:
+        A string representing the number of items in the database, or an error message.
     """
-    print("Computing custom score")
-    score = ((x * 2) + (y ** 1.5) - (z * 0.42)) / (x + y + z + 1)
-    rounded_score = round(score, 3)
-
-    result = {
-        "operation": "custom_score_calculation",
-        "inputs": {"x": x, "y": y, "z": z},
-        "score": rounded_score
-    }
-
-    return f"Custom score calculated successfully.\n\nResult: {json.dumps(result, indent=2)}"
+    user_repo = UserRepository()
+    try:
+        user_repo.connect()
+        count = user_repo.count_items()
+        return str(count)
+    except Exception as e:
+        return str(e)
+    finally:
+        if user_repo:
+            user_repo.close()
 
 @mcp.tool()
 async def get_items_by_brand_and_category(brand: str, category: str) -> str:
@@ -45,17 +41,18 @@ async def get_items_by_brand_and_category(brand: str, category: str) -> str:
         category: The category name to filter items by.
     
     Returns:
-        A JSON string representing the list of items from the specified brand and category, or an error message.
+        A string representing the list of items from the specified brand and category, or an error message.
     """
+    user_repo = UserRepository()
     try:
-        user_repo = UserRepository(settings.DB_HOST, settings.DB_PORT, settings.DB_USER, settings.DB_PASSWORD, settings.DB_NAME)
         user_repo.connect()
         items = user_repo.get_items_by_brand_and_category(brand, category)
         return str(items)
     except Exception as e:
         return f"Failed to fetch items by brand and category: {e}"
     finally:
-        user_repo.close()
+        if user_repo:
+            user_repo.close()
 
 @mcp.tool()
 async def get_items_by_brand(brand: str) -> str:
@@ -66,11 +63,10 @@ async def get_items_by_brand(brand: str) -> str:
         brand: The brand name to filter items by.
     
     Returns:
-        A JSON string representing the list of items from the specified brand, or an error message.
+        A string representing the list of items from the specified brand, or an error message.
     """
+    user_repo = UserRepository()
     try:
-        print("Getting items by brand")
-        user_repo = UserRepository(settings.DB_HOST, settings.DB_PORT, settings.DB_USER, settings.DB_PASSWORD, settings.DB_NAME)
         user_repo.connect()
         items = user_repo.get_items_by_brand(brand)
         return str(items)
@@ -88,11 +84,10 @@ async def get_items_by_category(category: str) -> str:
         category: The category name to filter items by.
     
     Returns:
-        A JSON string representing the list of items from the specified category, or an error message.
+        A string representing the list of items from the specified category, or an error message.
     """
+    user_repo = UserRepository()
     try:
-        print("enter get items by category")
-        user_repo = UserRepository(settings.DB_HOST, settings.DB_PORT, settings.DB_USER, settings.DB_PASSWORD, settings.DB_NAME)
         user_repo.connect()
         items = user_repo.get_items_by_category(category)
         return str(items)
@@ -110,11 +105,10 @@ async def get_items_by_name(name: str) -> str:
         name: Name of the product or item. 
     
     Returns:
-        A JSON string representing the list of items from the specified name, or an error message.
+        A string representing the list of items from the specified name, or an error message.
     """
+    user_repo = UserRepository()
     try:
-        print("enter get items by name")
-        user_repo = UserRepository(settings.DB_HOST, settings.DB_PORT, settings.DB_USER, settings.DB_PASSWORD, settings.DB_NAME)
         user_repo.connect()
         items = user_repo.get_items_by_name(name)
         return str(items)

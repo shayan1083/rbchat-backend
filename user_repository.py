@@ -1,13 +1,16 @@
 import psycopg2
+from settings import Settings
+
+settings = Settings()
 
 class UserRepository:
-    def __init__(self, host, port, user, password, database):
+    def __init__(self):
         self.connection_params = {
-            "host": host,
-            "port": port,
-            "user": user,
-            "password": password,
-            "dbname": database,
+            "host": settings.DB_HOST,
+            "port": settings.DB_PORT,
+            "user": settings.DB_USER,
+            "password": settings.DB_PASSWORD,
+            "dbname": settings.DB_NAME,
         }
         self.conn = None
 
@@ -71,4 +74,13 @@ class UserRepository:
                 return cursor.fetchall()
         except Exception as e:
             print("Get items by product name failed:", e)
+            return None
+        
+    def count_items(self):
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) FROM products;")
+                return cursor.fetchone()[0]
+        except Exception as e:
+            print("Count items failed:", e)
             return None
