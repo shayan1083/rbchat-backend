@@ -8,11 +8,11 @@ env_path = ".env"
 load_dotenv(env_path)
 settings = Settings()
 
-# --- Basic Stream Logger ---
+
 logger = logging.getLogger("llm_logger")
 logger.setLevel(logging.INFO)
 
-if not logger.handlers:
+if settings.ENABLE_LOGGING and not logger.handlers:
     handler = logging.StreamHandler()
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)

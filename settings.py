@@ -1,16 +1,19 @@
 import os
 from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
 
 env_path = ".env"
 load_dotenv(env_path)
 
-class Settings:
+class Settings(BaseSettings):
     # Database configuration
-    DB_HOST = os.getenv('DB_HOST')
-    DB_PORT = int(os.getenv('DB_PORT'))
-    DB_USER = os.getenv('DB_USER')
-    DB_PASSWORD = os.getenv('DB_PASSWORD')
-    DB_NAME = os.getenv('DB_NAME')
-    MCP_SERVER_URL=os.getenv('MCP_SERVER_URL')
-    MCP_SERVER_PORT=os.getenv('MCP_SERVER_PORT')
-    ALLOWED_ORIGINS=os.getenv('ALLOWED_ORIGINS')
+    DB_HOST: str = os.getenv('DB_HOST')
+    DB_PORT: int = int(os.getenv('DB_PORT'))
+    DB_USER: str = os.getenv('DB_USER')
+    DB_PASSWORD: str = os.getenv('DB_PASSWORD')
+    DB_NAME: str = os.getenv('DB_NAME')
+
+    MCP_SERVER_URL: str = os.getenv('MCP_SERVER_URL')
+    MCP_SERVER_PORT: str = os.getenv('MCP_SERVER_PORT')
+    ALLOWED_ORIGINS: str = os.getenv('ALLOWED_ORIGINS', '*')
+    ENABLE_LOGGING: bool= os.getenv('ENABLE_LOGGING')

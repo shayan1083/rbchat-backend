@@ -6,3 +6,5 @@ run mcp server:
 
 run mcp client:
 - uvicorn main:app --reload --port 8003 
+
+frontend in other git repo
