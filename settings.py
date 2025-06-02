@@ -16,4 +16,7 @@ class Settings(BaseSettings):
     MCP_SERVER_URL: str = os.getenv('MCP_SERVER_URL')
     MCP_SERVER_PORT: str = os.getenv('MCP_SERVER_PORT')
     ALLOWED_ORIGINS: str = os.getenv('ALLOWED_ORIGINS', '*')
+    
     ENABLE_LOGGING: bool= os.getenv('ENABLE_LOGGING')
+    LOG_LEVEL: str = os.getenv('LOG_LEVEL', 'INFO')
+    LOG_FILE: str = os.getenv('LOG_FILE', 'llm.log')

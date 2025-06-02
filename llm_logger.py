@@ -8,17 +8,19 @@ env_path = ".env"
 load_dotenv(env_path)
 settings = Settings()
 
-
 logger = logging.getLogger("llm_logger")
-logger.setLevel(logging.INFO)
+log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+logger.setLevel(log_level)
 
 if settings.ENABLE_LOGGING and not logger.handlers:
     handler = logging.StreamHandler()
+    handler.setLevel(log_level)
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    file_handler = logging.FileHandler("llm.log", mode='a')
+    file_handler = logging.FileHandler(settings.LOG_FILE, mode='a')
+    file_handler.setLevel(log_level)
     file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     file_handler.setFormatter(file_formatter)
     logger.addHandler(file_handler)
@@ -52,7 +54,14 @@ def log_to_database(model_name: str, prompt: str, response: str, input_tokens: i
         if conn:
             conn.close()
 
+def log_debug(message: str):
+    logger.debug(f"{message}")
 
+def log_info(message: str):
+    logger.info(f"{message}")
+
+def log_error(message: str):
+    logger.error(f"{message}")
 
 def log_tool_start(tool_name: str):
     logger.info(f"[Tool Start] 🔧 {tool_name} started")

@@ -4,7 +4,6 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.prebuilt import create_react_agent
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
-from dotenv import load_dotenv
 import json
 from llm_logger import log_tool_start, log_tool_end, log_llm_usage
 import traceback
@@ -18,7 +17,7 @@ model = ChatOpenAI(model="gpt-4o", streaming=True, verbose=True, stream_usage=Tr
                            
 agent_template = """
             Act as helpful assistant that is able to get information from a database based on the users natural language query.
-            You cannot answer questions that are not related to querying the database. If someone asks a question unrelated to your task, then say you cannot answer that due to my task.
+            You cannot answer questions that are not related to querying the database. If someone asks a question unrelated to your task, then say you can only answer database related questions.
             The retrieved context shall be provided by one of the registered tools.
             Pick the right tool to populate the context before giving the final answer to the given question.
             
@@ -27,9 +26,9 @@ agent_template = """
             
             1. Don't make any assumptions about the given question before retrieving the context. If the given question contains abbreviations or unknown words, don't try to interpret them before invoking one of the tools.
 
-            2. If the tool returns a list of items, format the list using markdown. Start the list with \\n\\n, and put each item on its own line using \\n. For example:
+            3. If there is no tool that can answer the question, say that you cannot answer the question because you do not have that ability yet.
 
-            \n\n- **Item A**: Description ($Price)\n- **Item B**: Description ($Price)
+            2. If the tool returns a list of items, return the list as an html table
 
             Do not say anything else before or after the list.
 

@@ -1,16 +1,16 @@
 from mcp.server.fastmcp import FastMCP
 from settings import Settings
 from user_repository import UserRepository
-import json
-import os
-from dotenv import load_dotenv
+import logging
 from settings import Settings
-
+from llm_logger import log_error
 
 settings = Settings()
+logger = logging.getLogger("llm_logger")
 
 MCP_PORT =  settings.MCP_SERVER_PORT
 mcp = FastMCP("RBChat", port=MCP_PORT)
+
 
 @mcp.tool()
 async def count_items_in_database():
@@ -20,16 +20,13 @@ async def count_items_in_database():
     Returns:
         A string representing the number of items in the database, or an error message.
     """
-    user_repo = UserRepository()
     try:
-        user_repo.connect()
-        count = user_repo.count_items()
+        with UserRepository() as user_repo:
+            count = user_repo.count_items()
         return str(count)
     except Exception as e:
+        log_error(f"Failed to count items: {e}")
         return str(e)
-    finally:
-        if user_repo:
-            user_repo.close()
 
 @mcp.tool()
 async def get_items_by_brand_and_category(brand: str, category: str) -> str:
@@ -43,16 +40,13 @@ async def get_items_by_brand_and_category(brand: str, category: str) -> str:
     Returns:
         A string representing the list of items from the specified brand and category, or an error message.
     """
-    user_repo = UserRepository()
     try:
-        user_repo.connect()
-        items = user_repo.get_items_by_brand_and_category(brand, category)
+        with UserRepository() as user_repo:
+            items = user_repo.get_items_by_brand_and_category(brand, category)
         return str(items)
     except Exception as e:
+        log_error(f"Failed to fetch items by brand and category: {e}")
         return f"Failed to fetch items by brand and category: {e}"
-    finally:
-        if user_repo:
-            user_repo.close()
 
 @mcp.tool()
 async def get_items_by_brand(brand: str) -> str:
@@ -65,15 +59,13 @@ async def get_items_by_brand(brand: str) -> str:
     Returns:
         A string representing the list of items from the specified brand, or an error message.
     """
-    user_repo = UserRepository()
     try:
-        user_repo.connect()
-        items = user_repo.get_items_by_brand(brand)
+        with UserRepository() as user_repo:
+            items = user_repo.get_items_by_brand(brand)
         return str(items)
     except Exception as e:
+        log_error(f"Failed to fetch items by brand: {e}")
         return f"Failed to fetch items by brand: {e}"
-    finally:
-        user_repo.close()
 
 @mcp.tool()
 async def get_items_by_category(category: str) -> str:
@@ -86,15 +78,13 @@ async def get_items_by_category(category: str) -> str:
     Returns:
         A string representing the list of items from the specified category, or an error message.
     """
-    user_repo = UserRepository()
     try:
-        user_repo.connect()
-        items = user_repo.get_items_by_category(category)
+        with UserRepository() as user_repo:
+            items = user_repo.get_items_by_category(category)
         return str(items)
     except Exception as e:
+        log_error(f"Failed to fetch items by category: {e}")
         return f"Failed to fetch items by category: {e}"
-    finally:
-        user_repo.close()
 
 @mcp.tool()
 async def get_items_by_name(name: str) -> str:
@@ -107,17 +97,13 @@ async def get_items_by_name(name: str) -> str:
     Returns:
         A string representing the list of items from the specified name, or an error message.
     """
-    user_repo = UserRepository()
     try:
-        user_repo.connect()
-        items = user_repo.get_items_by_name(name)
+        with UserRepository() as user_repo:
+            items = user_repo.get_items_by_name(name)
         return str(items)
     except Exception as e:
+        log_error(f"Failed to fetch items by name: {e}")
         return f"Failed to fetch items by name and description: {e}"
-    finally:
-        user_repo.close()
-
-
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")
