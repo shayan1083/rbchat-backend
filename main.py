@@ -18,11 +18,11 @@ app.add_middleware(
 )
 
 @app.get("/query")
-async def query(prompt: str):
+async def query(prompt: str, session_id: str = "default"):
     return StreamingResponse(run_agent(prompt), media_type="text/event-stream")
 
 @app.get("/queryllm")
-async def queryllm(prompt: str):
+async def queryllm(prompt: str, session_id: str = "default"):
     return StreamingResponse(call_llm(prompt), media_type="text/event-stream")
 
 

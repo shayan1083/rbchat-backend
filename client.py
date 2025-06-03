@@ -2,62 +2,24 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.prebuilt import create_react_agent
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
-import json
-from llm_logger import log_tool_start, log_tool_end, log_llm_usage
+from langchain_core.messages import HumanMessage, AIMessage 
 import traceback
-from settings import Settings
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 
+# custom classes and functions
+from llm_logger import log_tool_start, log_tool_end, log_llm_usage
+from settings import Settings
+from memory import get_session_history
+from prompts import agent_prompt, raw_prompt
 
 settings = Settings()
 
 model = ChatOpenAI(model="gpt-4o", streaming=True, verbose=True, stream_usage=True)
 
-                           
-agent_template = """
-            Act as helpful assistant that is able to get information from a database based on the users natural language query.
-            You cannot answer questions that are not related to querying the database. If someone asks a question unrelated to your task, then say you can only answer database related questions.
-            The retrieved context shall be provided by one of the registered tools.
-            Pick the right tool to populate the context before giving the final answer to the given question.
-            
-            
-            Tool calling instructions:
-            
-            1. Don't make any assumptions about the given question before retrieving the context. If the given question contains abbreviations or unknown words, don't try to interpret them before invoking one of the tools.
 
-            3. If there is no tool that can answer the question, say that you cannot answer the question because you do not have that ability yet.
 
-            2. If the tool returns a list of items, return the list as an html table
-
-            Do not say anything else before or after the list.
-
-            3. When listing items, only list the items and anyting else the tool returns, say nothing else. Do not say something like "Here are the items:"
-
-            4. If the tool returns a list of items, and the number of items to be retrieved is not specified by the user, use the default value of 10.
-
-            Question answering instructions (after invoking the tool and retrieving the context):
-            
-            1. Provide your final answer based on the information in the retrieved context
-            
-            2. Don't make any assumptions about the given question before answering.
-            If the given question contains abbreviations or unknown words which can be ambiguously interpreted ask user to clarify the question.
-            
-            3. If you don't know the answer just say that you don't know.
-            
-            4. Use only the data from the retrieved context to answer, don't make up.
-            
-            5. While answering don't mention context and context word explicitly, just provide answer to the question using the retrieved context transparently. 
-            Don't use phrases like "Based on the context", "Based on the information available in the retrieved context" and similar.
- 
-        """
-
-agent_prompt = ChatPromptTemplate.from_messages([
-    ("system", agent_template),
-    MessagesPlaceholder(variable_name="messages")
-])
-
-async def run_agent(prompt: str):
+async def run_agent(prompt: str, session_id: str = "default"):
     """Async generator for streaming agent responses to FastAPI"""
     try:
         async with streamablehttp_client(url=settings.MCP_SERVER_URL) as (read, write, _):
@@ -66,6 +28,9 @@ async def run_agent(prompt: str):
                 tools = await load_mcp_tools(session)
                 agent = create_react_agent(model, tools, prompt=agent_prompt)
 
+                history = get_session_history(session_id)
+
+                messages = history.messages + [HumanMessage(content=prompt)]
                 full_response = ""
                 input_tokens = None
                 output_tokens = None
@@ -73,7 +38,7 @@ async def run_agent(prompt: str):
                 tool_name = None
 
                 async for event in agent.astream_events(
-                    {"messages": [{"role": "user", "content": prompt}]},
+                    {"messages": messages},
                     version="v2"
                 ):  
                     if event["event"] == "on_chat_model_stream":
@@ -94,6 +59,8 @@ async def run_agent(prompt: str):
                     
                     elif event["event"] == "on_tool_end":
                         log_tool_end(tool_name, output=event["data"].get("output", ""))
+                history.add_message(HumanMessage(content=prompt))
+                history.add_message(AIMessage(content=full_response))
                 token_usage = {
                     "input_tokens": input_tokens,
                     "output_tokens": output_tokens,
@@ -102,33 +69,28 @@ async def run_agent(prompt: str):
                 log_llm_usage(model.model_name, prompt, full_response, token_usage, tool_name)
                 
     except Exception as e:
-        print(f"Error in run_agent: {e}")
         print("Full traceback:")
         traceback.print_exc()
-        yield f"data: {json.dumps({'error': str(e), 'type': 'error'})}\n\n"
-
-raw_template = """
-            You are a helpful assistant. Answer the question using your own knowledge.
-            If the users question requires some additional context, like a database call 
-            or an API request, say that you don't know because you don't have access to that information.
-                """
 
 
-raw_prompt = ChatPromptTemplate.from_messages([
-    ("system", raw_template),
-    ("user", "{input}")
-])
 
 
-async def call_llm(prompt: str):
+async def call_llm(prompt: str, session_id: str = "default"):
     """
     Streams a raw response from the LLM (no tools, no agent)
     """
-    messages = raw_prompt.format_messages(input=prompt)
+    history = get_session_history(session_id)
+    messages = history.messages + [HumanMessage(content=prompt)]
+
+    formatted_messages = raw_prompt.format_messages(messages=messages) 
+        
     full_response = ""
+    input_tokens = None
+    output_tokens = None
+    total_tokens = None
     try:
         # stream response tokens directly
-        async for chunk in model.astream(messages):
+        async for chunk in model.astream(formatted_messages):
             usage = getattr(chunk, "usage_metadata", None)
             if usage:
                 input_tokens = usage.get("input_tokens")
@@ -136,6 +98,10 @@ async def call_llm(prompt: str):
                 total_tokens = usage.get("total_tokens")
             full_response += chunk.content
             yield f"data: {chunk.content}\n\n"
+
+        history.add_message(HumanMessage(content=prompt))
+        history.add_message(AIMessage(content=full_response))
+
         token_usage = {
                     "input_tokens": input_tokens,
                     "output_tokens": output_tokens,
@@ -143,5 +109,5 @@ async def call_llm(prompt: str):
         }
         log_llm_usage(model.model_name, prompt, full_response, token_usage)
     except Exception as e:
-        print(f"LLM stream error: {e}")
-        yield f"data: Error: {e}\n\n"
+        print("Full traceback:")
+        traceback.print_exc()

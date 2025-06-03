@@ -1,17 +1,22 @@
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
-from pydantic import BaseModel
+from langchain_core.messages import BaseMessage
+from pydantic import BaseModel, Field
+from typing import List
 
 class InMemoryHistory(BaseChatMessageHistory, BaseModel):
-    messages: list[dict] = []
+    messages: List[BaseMessage] = Field(default_factory=list)
     
     def add_messages(self, messages: list[dict]):
         self.messages.extend(messages)
+
+    def add_message(self, message: BaseMessage) -> None:
+        self.messages.append(message)
     
     def clear(self):
         self.messages = []
 
-store = {}
+store: dict[str, InMemoryHistory] = {}
 
 def get_session_history(session_id: str) -> BaseChatMessageHistory:
     if session_id not in store:

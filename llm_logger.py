@@ -13,11 +13,11 @@ log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
 logger.setLevel(log_level)
 
 if settings.ENABLE_LOGGING and not logger.handlers:
-    handler = logging.StreamHandler()
-    handler.setLevel(log_level)
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    # handler = logging.StreamHandler()
+    # handler.setLevel(log_level)
+    # formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    # handler.setFormatter(formatter)
+    # logger.addHandler(handler)
 
     file_handler = logging.FileHandler(settings.LOG_FILE, mode='a')
     file_handler.setLevel(log_level)
