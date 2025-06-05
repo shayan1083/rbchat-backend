@@ -8,3 +8,4 @@ langchain-mcp-adapters
 fastmcp
 langchain-openai
 langchain-postgres
+psycopg[binary,pool]

@@ -5,13 +5,14 @@ from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage 
 import traceback
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 # custom classes and functions
 from llm_logger import log_tool_start, log_tool_end, log_llm_usage
 from settings import Settings
 from memory import get_session_history
+from db_memory import get_session_history
 from prompts import agent_prompt, raw_prompt
+
 
 settings = Settings()
 
@@ -29,8 +30,9 @@ async def run_agent(prompt: str, session_id: str = "default"):
                 agent = create_react_agent(model, tools, prompt=agent_prompt)
 
                 history = get_session_history(session_id)
+                messages = history.messages
+                messages.append(HumanMessage(content=prompt))
 
-                messages = history.messages + [HumanMessage(content=prompt)]
                 full_response = ""
                 input_tokens = None
                 output_tokens = None
@@ -73,14 +75,13 @@ async def run_agent(prompt: str, session_id: str = "default"):
         traceback.print_exc()
 
 
-
-
 async def call_llm(prompt: str, session_id: str = "default"):
     """
     Streams a raw response from the LLM (no tools, no agent)
     """
     history = get_session_history(session_id)
-    messages = history.messages + [HumanMessage(content=prompt)]
+    messages = history.messages
+    messages.append(HumanMessage(content=prompt))
 
     formatted_messages = raw_prompt.format_messages(messages=messages) 
         

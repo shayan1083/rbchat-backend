@@ -21,6 +21,7 @@ async def count_items_in_database():
         A string representing the number of items in the database, or an error message.
     """
     try:
+        print("Counting items in the database...")
         with UserRepository() as user_repo:
             count = user_repo.count_items()
         return str(count)
