@@ -13,11 +13,6 @@ log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
 logger.setLevel(log_level)
 
 if settings.ENABLE_LOGGING and not logger.handlers:
-    # handler = logging.StreamHandler()
-    # handler.setLevel(log_level)
-    # formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    # handler.setFormatter(formatter)
-    # logger.addHandler(handler)
 
     file_handler = logging.FileHandler(settings.LOG_FILE, mode='a')
     file_handler.setLevel(log_level)
@@ -71,6 +66,8 @@ def log_tool_end(tool_name: str, output: str = None):
     if output:
         logger.info(f"[Tool Output] {output}")
 
+def log_sql_output(sql_query: str):
+    logger.info(f"[SQL Query] {sql_query}")
 
 # Main usage logging
 def log_llm_usage(model_name: str, prompt: str, response: str, token_usage: dict, tool_used: str = None):

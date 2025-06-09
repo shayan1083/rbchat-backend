@@ -21,3 +21,7 @@ class Settings(BaseSettings):
     ENABLE_LOGGING: bool= os.getenv('ENABLE_LOGGING')
     LOG_LEVEL: str = os.getenv('LOG_LEVEL', 'INFO')
     LOG_FILE: str = os.getenv('LOG_FILE', 'llm.log')
+
+    # SQL Generation Prompt Configuration
+    DIALECT: str = os.getenv('SQL_DIALECT')
+    TOP_K: int = int(os.getenv('SQL_TOP_K'))

@@ -66,3 +66,29 @@ class UserRepository:
         with self.conn.cursor() as cursor:
             cursor.execute("SELECT COUNT(*) FROM products;")
             return cursor.fetchone()[0]
+        
+    def get_tables_info(self):
+        with self.conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT table_name, column_name, data_type
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                ORDER BY table_name, ordinal_position
+            """)
+            rows = cursor.fetchall()
+
+        table_dict = {}
+        for table, column, dtype in rows:
+            table_dict.setdefault(table, []).append((column, dtype))
+
+        return "\n".join(
+            f"Table: {table}\nColumns: {', '.join(col for col, _ in cols)}"
+            for table, cols in table_dict.items()
+        )
+    
+    def run_sql_query(self, query: str):
+        with self.conn.cursor() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            col_names = [desc[0] for desc in cursor.description]
+            return [dict(zip(col_names, row)) for row in rows]
