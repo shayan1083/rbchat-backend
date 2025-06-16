@@ -4,42 +4,42 @@ from user_repository import UserRepository
 
 settings = Settings()
 
-agent_template = """
-            Act as helpful assistant that is able to get information from a database based on the users natural language query.
-            You cannot answer questions that are not related to querying the database. If someone asks a question unrelated to your task, then say you can only answer database related questions.
-            The retrieved context shall be provided by one of the registered tools.
-            Pick the right tool to populate the context before giving the final answer to the given question.
+# agent_template = """
+#             Act as helpful assistant that is able to get information from a database based on the users natural language query.
+#             You cannot answer questions that are not related to querying the database. If someone asks a question unrelated to your task, then say you can only answer database related questions.
+#             The retrieved context shall be provided by one of the registered tools.
+#             Pick the right tool to populate the context before giving the final answer to the given question.
             
             
-            Tool calling instructions:
+#             Tool calling instructions:
             
-            1. Don't make any assumptions about the given question before retrieving the context. If the given question contains abbreviations or unknown words, don't try to interpret them before invoking one of the tools.
+#             1. Don't make any assumptions about the given question before retrieving the context. If the given question contains abbreviations or unknown words, don't try to interpret them before invoking one of the tools.
 
-            3. If there is no tool that can answer the question, say that you cannot answer the question because you do not have that ability yet.
+#             3. If there is no tool that can answer the question, say that you cannot answer the question because you do not have that ability yet.
 
-            2. If the tool returns a list of items, return the list as an html table
+#             2. If the tool returns a list of items, return the list as an html table
 
-            Do not say anything else before or after the list.
+#             Do not say anything else before or after the list.
 
-            3. When listing items, only list the items and anyting else the tool returns, say nothing else. Do not say something like "Here are the items:"
+#             3. When listing items, only list the items and anyting else the tool returns, say nothing else. Do not say something like "Here are the items:"
 
-            4. If the tool returns a list of items, and the number of items to be retrieved is not specified by the user, use the default value of 10.
+#             4. If the tool returns a list of items, and the number of items to be retrieved is not specified by the user, use the default value of 10.
 
-            Question answering instructions (after invoking the tool and retrieving the context):
+#             Question answering instructions (after invoking the tool and retrieving the context):
             
-            1. Provide your final answer based on the information in the retrieved context
+#             1. Provide your final answer based on the information in the retrieved context
             
-            2. Don't make any assumptions about the given question before answering.
-            If the given question contains abbreviations or unknown words which can be ambiguously interpreted ask user to clarify the question.
+#             2. Don't make any assumptions about the given question before answering.
+#             If the given question contains abbreviations or unknown words which can be ambiguously interpreted ask user to clarify the question.
             
-            3. If you don't know the answer just say that you don't know.
+#             3. If you don't know the answer just say that you don't know.
             
-            4. Use only the data from the retrieved context to answer, don't make up.
+#             4. Use only the data from the retrieved context to answer, don't make up.
             
-            5. While answering don't mention context and context word explicitly, just provide answer to the question using the retrieved context transparently. 
-            Don't use phrases like "Based on the context", "Based on the information available in the retrieved context" and similar.
+#             5. While answering don't mention context and context word explicitly, just provide answer to the question using the retrieved context transparently. 
+#             Don't use phrases like "Based on the context", "Based on the information available in the retrieved context" and similar.
 
-        """
+#         """
 
 
 sql_generation_template = """
@@ -55,7 +55,7 @@ sql_generation_template = """
             - "What was my second question?"
             - "What did you say before?"
 
-            However, you can still use the conversation history to help you answer the question. 
+            However, you can still use the conversation history to help you with your task. 
 
             SECURITY RULES:
             - Never allow direct insertion of user input into SQL queries.
@@ -84,6 +84,14 @@ sql_generation_template = """
 
             When listing items, only list the items and anyting else the tool returns, say nothing else. Do not say something like "Here are the items:"
 
+            Before limiting the results, first look how many rows the query would return. If its less than {top_k}, then return nomrally.
+
+            If its more than {top_k}, then limit the results to {top_k} items. Also, ask the user if they want to see all the results. 
+
+            
+
+            If the tool call doesn't return a list of items, then give the answer in a full sentence. 
+
             If the question is unrelated to the database, then say that you can only answer database related questions.
             
             Only use data from the retrieved context to answer, don't make up information. 
@@ -96,19 +104,19 @@ sql_generation_template = """
 #     MessagesPlaceholder(variable_name="messages")
 # ])
 
-with UserRepository() as repo:
-    schema_info = repo.get_tables_info()
+# with UserRepository() as repo:
+#     schema_info = repo.get_tables_info()
 
-formatted_sql_prompt = sql_generation_template.format(
-    dialect=settings.DIALECT,
-    top_k=settings.TOP_K,
-    tables_info=schema_info
-)
+# formatted_sql_prompt = sql_generation_template.format(
+#     dialect=settings.DIALECT,
+#     top_k=settings.TOP_K,
+#     tables_info=schema_info
+# )
 
-agent_prompt = ChatPromptTemplate.from_messages([
-    ("system", formatted_sql_prompt),
-    MessagesPlaceholder(variable_name="messages")
-])
+# agent_prompt = ChatPromptTemplate.from_messages([
+#     ("system", formatted_sql_prompt),
+#     MessagesPlaceholder(variable_name="messages")
+# ])
 
 
 raw_template = """

@@ -5,13 +5,15 @@ from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage 
 import traceback
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 # custom classes and functions
 from llm_logger import log_tool_start, log_tool_end, log_llm_usage
 from settings import Settings
 from memory import get_session_history
 from db_memory import get_session_history
-from prompts import agent_prompt, raw_prompt
+from prompts import raw_prompt, sql_generation_template
+from user_repository import UserRepository
 
 
 settings = Settings()
@@ -27,6 +29,19 @@ async def run_agent(prompt: str, session_id: str = "default"):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 tools = await load_mcp_tools(session)
+
+                with UserRepository() as repo:
+                    schema_info = repo.get_tables_info()
+                formatted_sql_prompt = sql_generation_template.format(
+                    dialect=settings.DIALECT,
+                    top_k=settings.TOP_K,
+                    tables_info=schema_info
+                )
+                agent_prompt = ChatPromptTemplate.from_messages([
+                    ("system", formatted_sql_prompt),
+                    MessagesPlaceholder(variable_name="messages")
+                ])
+
                 agent = create_react_agent(model, tools, prompt=agent_prompt)
 
                 history = get_session_history(session_id)

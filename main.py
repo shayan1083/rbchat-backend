@@ -18,6 +18,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+
 @app.get("/query")
 async def query(prompt: str, session_id: str = "default"):
     return StreamingResponse(run_agent(prompt, session_id), media_type="text/event-stream")
