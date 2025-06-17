@@ -8,10 +8,10 @@ import traceback
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 # custom classes and functions
-from llm_logger import log_tool_start, log_tool_end, log_llm_usage
+from llm_logger import log_tool_start, log_tool_end, log_llm_usage, log_error
 from settings import Settings
-from memory import get_session_history
-from db_memory import get_session_history
+# from memory import get_session_history
+from db_memory import get_session_history, ensure_chat_history_table_exists
 from prompts import raw_prompt, sql_generation_template
 from user_repository import UserRepository
 
@@ -25,6 +25,7 @@ model = ChatOpenAI(model="gpt-4o", streaming=True, verbose=True, stream_usage=Tr
 async def run_agent(prompt: str, session_id: str = "default"):
     """Async generator for streaming agent responses to FastAPI"""
     try:
+        ensure_chat_history_table_exists()
         async with streamablehttp_client(url=settings.MCP_SERVER_URL) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
@@ -32,6 +33,7 @@ async def run_agent(prompt: str, session_id: str = "default"):
 
                 with UserRepository() as repo:
                     schema_info = repo.get_tables_info()
+
                 formatted_sql_prompt = sql_generation_template.format(
                     dialect=settings.DIALECT,
                     top_k=settings.TOP_K,
@@ -76,8 +78,10 @@ async def run_agent(prompt: str, session_id: str = "default"):
                     
                     elif event["event"] == "on_tool_end":
                         log_tool_end(tool_name, output=event["data"].get("output", ""))
+
                 history.add_message(HumanMessage(content=prompt))
                 history.add_message(AIMessage(content=full_response))
+                
                 token_usage = {
                     "input_tokens": input_tokens,
                     "output_tokens": output_tokens,
@@ -86,7 +90,7 @@ async def run_agent(prompt: str, session_id: str = "default"):
                 log_llm_usage(model.model_name, prompt, full_response, token_usage, tool_name)
                 
     except Exception as e:
-        print("Full traceback:")
+        log_error("LLM run_agent error")
         traceback.print_exc()
 
 
@@ -125,5 +129,5 @@ async def call_llm(prompt: str, session_id: str = "default"):
         }
         log_llm_usage(model.model_name, prompt, full_response, token_usage)
     except Exception as e:
-        print("Full traceback:")
+        log_error("LLM call_llm error")
         traceback.print_exc()

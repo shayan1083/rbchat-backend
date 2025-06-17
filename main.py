@@ -4,6 +4,7 @@ from client import run_agent, call_llm
 from fastapi.middleware.cors import CORSMiddleware
 from settings import Settings
 from db_memory import generate_session_id
+from llm_logger import log_info
 
 app = FastAPI()
 
@@ -22,14 +23,18 @@ app.add_middleware(
 
 @app.get("/query")
 async def query(prompt: str, session_id: str = "default"):
+    log_info(f"[QUERY] /query endpoint hit | Session: {session_id} | Prompt: {prompt}")
     return StreamingResponse(run_agent(prompt, session_id), media_type="text/event-stream")
 
 @app.get("/queryllm")
 async def queryllm(prompt: str, session_id: str = "default"):
+    log_info(f"[QUERYLLM] /queryllm endpoint hit | Session: {session_id} | Prompt: {prompt}")
     return StreamingResponse(call_llm(prompt, session_id), media_type="text/event-stream")
 
 @app.get("/session")
 def new_session():
-    return {"session_id": generate_session_id()}
+    new_id = generate_session_id()
+    log_info(f"[SESSION] New session created: {new_id}")
+    return {"session_id": new_id}
 
 # uvicorn main:app --reload --host 8003
