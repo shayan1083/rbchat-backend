@@ -39,3 +39,5 @@ def run_sql_query(query: str) -> str:
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")
+    # or docker build -t mcp-server .
+    # docker run -d -p 7999:7999 --env-file .env --name mcp-server-container mcp-server

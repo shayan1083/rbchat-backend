@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from settings import Settings
 from db_memory import generate_session_id
 from llm_logger import log_info
+import uvicorn
 
 app = FastAPI()
 
@@ -37,4 +38,6 @@ def new_session():
     log_info(f"[SESSION] New session created: {new_id}")
     return {"session_id": new_id}
 
+if __name__ == "__main__":
+    uvicorn.run("main:app", host=settings.FASTAPI_HOST, port=settings.FASTAPI_PORT, reload=True)
 # uvicorn main:app --reload --host 8003

@@ -21,6 +21,7 @@ class PostgresHandler(logging.Handler):
             line_number INT
         );
         """
+        conn = None
         try:
             conn = psycopg2.connect(**self.connection_params)
             with conn:

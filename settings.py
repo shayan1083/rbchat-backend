@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     MCP_SERVER_URL: str = os.getenv('MCP_SERVER_URL')
     MCP_SERVER_PORT: str = os.getenv('MCP_SERVER_PORT')
     ALLOWED_ORIGINS: str = os.getenv('ALLOWED_ORIGINS', '*')
+    FASTAPI_HOST: str = os.getenv('FASTAPI_URL', "127.0.0.1")
+    FASTAPI_PORT: int = int(os.getenv('FASTAPI_PORT', 8003))
     
     ENABLE_LOGGING: bool= os.getenv('ENABLE_LOGGING')
     LOG_LEVEL: str = os.getenv('LOG_LEVEL', 'INFO')
