@@ -27,6 +27,8 @@ sql_generation_template = """
 
             Unless the user specifies a number of items to retrieve, always limit your query to at most {top_k} results.
 
+            When interpreting the users' questions that refer to names or text fields (e.g. "name", "description"), assume users mean a partial match unless otherwise specified. 
+
             You can order the results by a relevant column to return the most interesting examples in the database.
 
             Never query for all the columns from a specific table, only look for a few relevant columns given the question.

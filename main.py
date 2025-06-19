@@ -40,4 +40,5 @@ def new_session():
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host=settings.FASTAPI_HOST, port=settings.FASTAPI_PORT, reload=True)
+    
 # uvicorn main:app --reload --host 8003

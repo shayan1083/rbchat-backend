@@ -4,13 +4,13 @@ from user_repository import UserRepository
 import logging
 from settings import Settings
 from llm_logger import log_error, log_sql_output
+from fastapi import FastAPI
 
 settings = Settings()
 logger = logging.getLogger("llm_logger")
 
 MCP_PORT =  settings.MCP_SERVER_PORT
-mcp = FastMCP("RBChat", port=MCP_PORT)
-
+mcp = FastMCP("RBChat")
 
 
 @mcp.tool()
@@ -37,7 +37,8 @@ def run_sql_query(query: str) -> str:
         return f"Query failed: {e}"
 
 
-if __name__ == "__main__":
-    mcp.run(transport="streamable-http")
-    # or docker build -t mcp-server .
-    # docker run -d -p 7999:7999 --env-file .env --name mcp-server-container mcp-server
+mcp_app = mcp.streamable_http_app()
+app = FastAPI(lifespan=mcp_app.router.lifespan_context)
+app.mount("/mcp-server", mcp_app, "mcp")
+
+# uvicorn tools:app --reload --port 7999

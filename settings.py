@@ -14,8 +14,9 @@ class Settings(BaseSettings):
     DB_NAME: str = os.getenv('DB_NAME')
     DB_CHAT_HISTORY_TABLE: str = os.getenv('DB_CHAT_HISTORY_TABLE')
 
-    MCP_SERVER_URL: str = os.getenv('MCP_SERVER_URL')
+    MCP_SERVER_HOST: str = os.getenv('MCP_SERVER_HOST')
     MCP_SERVER_PORT: str = os.getenv('MCP_SERVER_PORT')
+    MCP_SERVER_URL: str = f"http://{MCP_SERVER_HOST}:{MCP_SERVER_PORT}/mcp-server/mcp"
     ALLOWED_ORIGINS: str = os.getenv('ALLOWED_ORIGINS', '*')
     FASTAPI_HOST: str = os.getenv('FASTAPI_URL', "127.0.0.1")
     FASTAPI_PORT: int = int(os.getenv('FASTAPI_PORT', 8003))

@@ -10,7 +10,6 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 # custom classes and functions
 from llm_logger import log_tool_start, log_tool_end, log_llm_usage, log_error
 from settings import Settings
-# from memory import get_session_history
 from db_memory import get_session_history, ensure_chat_history_table_exists
 from prompts import raw_prompt, sql_generation_template
 from user_repository import UserRepository
@@ -20,7 +19,7 @@ settings = Settings()
 
 model = ChatOpenAI(model="gpt-4o", streaming=True, verbose=True, stream_usage=True)
 
-
+# mcp_server_url = f"http://{settings.MCP_SERVER_HOST}:{settings.MCP_SERVER_PORT}/mcp-server/mcp"
 
 async def run_agent(prompt: str, session_id: str = "default"):
     """Async generator for streaming agent responses to FastAPI"""
@@ -90,7 +89,7 @@ async def run_agent(prompt: str, session_id: str = "default"):
                 log_llm_usage(model.model_name, prompt, full_response, token_usage, tool_name)
                 
     except Exception as e:
-        log_error("LLM run_agent error")
+        log_error("LLM run_agent error: ", str(e))
         traceback.print_exc()
 
 
@@ -129,5 +128,5 @@ async def call_llm(prompt: str, session_id: str = "default"):
         }
         log_llm_usage(model.model_name, prompt, full_response, token_usage)
     except Exception as e:
-        log_error("LLM call_llm error")
+        log_error("LLM call_llm error", str(e))
         traceback.print_exc()
