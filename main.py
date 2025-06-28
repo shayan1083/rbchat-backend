@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.responses import StreamingResponse
 from client import run_agent, call_llm
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,8 +6,13 @@ from settings import Settings
 from db_memory import generate_session_id
 from llm_logger import log_info
 import uvicorn
+from typing import Annotated
+
+from auth import router as auth_router, get_current_active_user, User
 
 app = FastAPI()
+
+app.include_router(auth_router, prefix="/auth")
 
 settings = Settings()
 
@@ -22,8 +27,13 @@ app.add_middleware(
 
 
 
+
+
 @app.get("/query")
-async def query(prompt: str, session_id: str = "default"):
+async def query(
+    prompt: str, 
+    session_id: str = "default",
+    ):
     log_info(f"[QUERY] /query endpoint hit | Session: {session_id} | Prompt: {prompt}")
     return StreamingResponse(run_agent(prompt, session_id), media_type="text/event-stream")
 
@@ -37,6 +47,7 @@ def new_session():
     new_id = generate_session_id()
     log_info(f"[SESSION] New session created: {new_id}")
     return {"session_id": new_id}
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host=settings.FASTAPI_HOST, port=settings.FASTAPI_PORT, reload=True)

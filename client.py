@@ -19,8 +19,6 @@ settings = Settings()
 
 model = ChatOpenAI(model="gpt-4o", streaming=True, verbose=True, stream_usage=True)
 
-# mcp_server_url = f"http://{settings.MCP_SERVER_HOST}:{settings.MCP_SERVER_PORT}/mcp-server/mcp"
-
 async def run_agent(prompt: str, session_id: str = "default"):
     """Async generator for streaming agent responses to FastAPI"""
     try:
@@ -46,7 +44,7 @@ async def run_agent(prompt: str, session_id: str = "default"):
                 agent = create_react_agent(model, tools, prompt=agent_prompt)
 
                 history = get_session_history(session_id)
-                messages = history.messages
+                messages = history.messages[-settings.MEMORY_LIMIT:]
                 messages.append(HumanMessage(content=prompt))
 
                 full_response = ""
@@ -89,7 +87,7 @@ async def run_agent(prompt: str, session_id: str = "default"):
                 log_llm_usage(model.model_name, prompt, full_response, token_usage, tool_name)
                 
     except Exception as e:
-        log_error("LLM run_agent error: ", str(e))
+        log_error(f"LLM run_agent error: {str(e)}")
         traceback.print_exc()
 
 
@@ -98,7 +96,7 @@ async def call_llm(prompt: str, session_id: str = "default"):
     Streams a raw response from the LLM (no tools, no agent)
     """
     history = get_session_history(session_id)
-    messages = history.messages
+    messages = history.messages[-settings.MEMORY_LIMIT:]
     messages.append(HumanMessage(content=prompt))
 
     formatted_messages = raw_prompt.format_messages(messages=messages) 
@@ -128,5 +126,5 @@ async def call_llm(prompt: str, session_id: str = "default"):
         }
         log_llm_usage(model.model_name, prompt, full_response, token_usage)
     except Exception as e:
-        log_error("LLM call_llm error", str(e))
+        log_error(f"LLM call_llm error: {str(e)}")
         traceback.print_exc()

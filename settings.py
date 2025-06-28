@@ -6,6 +6,9 @@ env_path = ".env"
 load_dotenv(env_path)
 
 class Settings(BaseSettings):
+    # Chat history memory
+    MEMORY_LIMIT: int = int(os.getenv('MEMORY_LIMIT', 10))
+
     # Database configuration
     DB_HOST: str = os.getenv('DB_HOST')
     DB_PORT: int = int(os.getenv('DB_PORT'))
@@ -28,3 +31,8 @@ class Settings(BaseSettings):
     # SQL Generation Prompt Configuration
     DIALECT: str = os.getenv('SQL_DIALECT')
     TOP_K: int = int(os.getenv('SQL_TOP_K'))
+
+    # authentication settings
+    SECRET_KEY: str = os.getenv('AUTH_SECRET_KEY')
+    ALGORITHM: str = os.getenv('HASH_ALGORITHM', 'HS256')
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES', 30))
