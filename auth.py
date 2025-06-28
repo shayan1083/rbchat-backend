@@ -19,6 +19,8 @@ fake_users_db = {
         "username": "johndoe",
         "full_name": "John Doe",
         "email": "johndoe@example.com",
+        "location": "USA",
+        "lastLogin": "2023-10-01T12:00:00Z",
         "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW", # "secret"
         "disabled": False,
     }
@@ -38,6 +40,8 @@ class User(BaseModel):
     username: str
     email: str | None = None
     full_name: str | None = None
+    location: str | None = None
+    lastLogin: str | None = None
     disabled: bool | None = None
 
 
@@ -52,7 +56,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
-
 
 def get_user(db, username: str):
     if username in db:
@@ -123,12 +126,6 @@ async def login_for_access_token(
     return Token(access_token=access_token, token_type="bearer")
 
 
-@router.get("/users/me", response_model=User)
+@router.get("/user/me", response_model=User)
 async def read_users_me(current_user: Annotated[User, Depends(get_current_active_user)]):
     return current_user
-
-@router.get("/users/me/items")
-async def read_own_items(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-):
-    return [{"item_id": "Foo", "owner": current_user.username}]

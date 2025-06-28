@@ -100,12 +100,6 @@ def log_llm_usage(model_name: str, prompt: str, response: str, token_usage: dict
     )
 
 if settings.ENABLE_LOGGING and not logger.handlers:
-    file_handler = logging.FileHandler(settings.LOG_FILE, mode='a')
-    file_handler.setLevel(log_level)
-    file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    file_handler.setFormatter(file_formatter)
-    logger.addHandler(file_handler)
-
     pg_handler = PostgresHandler(connection_params)
     pg_handler.setLevel(log_level)
     logger.addHandler(pg_handler)
