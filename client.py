@@ -52,6 +52,7 @@ async def run_agent(prompt: str, session_id: str = "default"):
                 output_tokens = None
                 total_tokens = None
                 tool_name = None
+                tool_input = None
 
                 async for event in agent.astream_events(
                     {"messages": messages},
@@ -71,6 +72,7 @@ async def run_agent(prompt: str, session_id: str = "default"):
                     
                     elif event["event"] == "on_tool_start":
                         tool_name = event["name"]
+                        tool_input = event["data"].get("input").get("query")
                         log_tool_start(tool_name)
                     
                     elif event["event"] == "on_tool_end":
@@ -84,7 +86,7 @@ async def run_agent(prompt: str, session_id: str = "default"):
                     "output_tokens": output_tokens,
                     "total_tokens": total_tokens
                 }
-                log_llm_usage(model.model_name, prompt, full_response, token_usage, tool_name)
+                log_llm_usage(model.model_name, prompt, full_response, token_usage, tool_input)
                 
     except Exception as e:
         log_error(f"LLM run_agent error: {str(e)}")

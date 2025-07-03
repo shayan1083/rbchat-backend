@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     MCP_SERVER_HOST: str = os.getenv('MCP_SERVER_HOST')
     MCP_SERVER_PORT: str = os.getenv('MCP_SERVER_PORT')
     MCP_SERVER_URL: str = f"http://{MCP_SERVER_HOST}:{MCP_SERVER_PORT}/mcp-server/mcp"
+    
     ALLOWED_ORIGINS: str = os.getenv('ALLOWED_ORIGINS', '*')
     FASTAPI_HOST: str = os.getenv('FASTAPI_URL', "127.0.0.1")
     FASTAPI_PORT: int = int(os.getenv('FASTAPI_PORT', 8003))
@@ -30,8 +31,3 @@ class Settings(BaseSettings):
     # SQL Generation Prompt Configuration
     DIALECT: str = os.getenv('SQL_DIALECT')
     TOP_K: int = int(os.getenv('SQL_TOP_K'))
-
-    # authentication settings
-    SECRET_KEY: str = os.getenv('AUTH_SECRET_KEY')
-    ALGORITHM: str = os.getenv('HASH_ALGORITHM', 'HS256')
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES', 30))

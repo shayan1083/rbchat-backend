@@ -50,12 +50,7 @@ sql_generation_template = """
                             <tr> and so on, just start directly with the <table> tag. 
 
             When listing items, only list the items and anyting else the tool returns, say nothing else. Do not say something like "Here are the items:"
-
-            Before limiting the results, first look how many rows the query would return. If its less than {top_k}, then return nomrally.
-
-            If its more than {top_k}, then limit the results to {top_k} items. Also, ask the user if they want to see all the results. 
-
-            
+        
 
             If the tool call doesn't return a list of items, then give the answer in a full sentence. 
 

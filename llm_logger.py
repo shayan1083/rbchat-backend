@@ -76,9 +76,6 @@ def log_tool_end(tool_name: str, output: str = None):
     if output:
         logger.info(f"[Tool Output] {output}", stacklevel=2)
 
-def log_sql_output(sql_query: str):
-    logger.info(f"[SQL Query] {sql_query}", stacklevel=2)
-
 # Main usage logging
 def log_llm_usage(model_name: str, prompt: str, response: str, token_usage: dict, tool_used: str = None):
     logger.info(f"[LLM] Model: {model_name}", stacklevel=2)
