@@ -11,15 +11,16 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from llm_logger import log_tool_start, log_tool_end, log_llm_usage, log_error
 from settings import Settings
 from db_memory import get_session_history, ensure_chat_history_table_exists
-from prompts import raw_prompt, sql_generation_template
+from prompts import sql_generation_template
 from user_repository import UserRepository
+# from file_upload import load_and_chunk_file
 
 
 settings = Settings()
 
 model = ChatOpenAI(model="gpt-4o", streaming=True, verbose=True, stream_usage=True)
 
-async def run_agent(prompt: str, session_id: str = "default"):
+async def run_agent(prompt: str, session_id: str = "default", file_context: dict = None):
     """Async generator for streaming agent responses to FastAPI"""
     try:
         ensure_chat_history_table_exists()
@@ -36,8 +37,17 @@ async def run_agent(prompt: str, session_id: str = "default"):
                     top_k=settings.TOP_K,
                     tables_info=schema_info
                 )
+                combined_prompt = formatted_sql_prompt
+                if file_context:
+                    combined_prompt += '\n\nAdditional file context provided by user:\n'
+                    combined_prompt += f'File Name: {file_context["filename"]}\n' 
+                    escaped_content = file_context['chunks'].replace("{", "{{").replace("}", "}}")
+                    combined_prompt += f'File Content: \n\n{escaped_content}'
+
+                # print(combined_prompt)
+
                 agent_prompt = ChatPromptTemplate.from_messages([
-                    ("system", formatted_sql_prompt),
+                    ("system", combined_prompt),
                     MessagesPlaceholder(variable_name="messages")
                 ])
 
@@ -86,47 +96,9 @@ async def run_agent(prompt: str, session_id: str = "default"):
                     "output_tokens": output_tokens,
                     "total_tokens": total_tokens
                 }
-                log_llm_usage(model.model_name, prompt, full_response, token_usage, tool_input)
+                log_llm_usage(model.model_name, prompt, full_response, token_usage, tool_name)
                 
     except Exception as e:
-        log_error(f"LLM run_agent error: {str(e)}")
+        log_error(f"LLM run_agent error: {traceback.format_exc()}")
         traceback.print_exc()
 
-
-async def call_llm(prompt: str, session_id: str = "default"):
-    """
-    Streams a raw response from the LLM (no tools, no agent)
-    """
-    history = get_session_history(session_id)
-    messages = history.messages[-settings.MEMORY_LIMIT:]
-    messages.append(HumanMessage(content=prompt))
-
-    formatted_messages = raw_prompt.format_messages(messages=messages) 
-        
-    full_response = ""
-    input_tokens = None
-    output_tokens = None
-    total_tokens = None
-    try:
-        # stream response tokens directly
-        async for chunk in model.astream(formatted_messages):
-            usage = getattr(chunk, "usage_metadata", None)
-            if usage:
-                input_tokens = usage.get("input_tokens")
-                output_tokens = usage.get("output_tokens")
-                total_tokens = usage.get("total_tokens")
-            full_response += chunk.content
-            yield f"data: {chunk.content}\n\n"
-
-        history.add_message(HumanMessage(content=prompt))
-        history.add_message(AIMessage(content=full_response))
-
-        token_usage = {
-                    "input_tokens": input_tokens,
-                    "output_tokens": output_tokens,
-                    "total_tokens": total_tokens
-        }
-        log_llm_usage(model.model_name, prompt, full_response, token_usage)
-    except Exception as e:
-        log_error(f"LLM call_llm error: {str(e)}")
-        traceback.print_exc()

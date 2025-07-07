@@ -8,7 +8,7 @@ load_dotenv(env_path)
 class Settings(BaseSettings):
     # Chat history memory
     MEMORY_LIMIT: int = int(os.getenv('MEMORY_LIMIT', 10))
-
+    
     # Database configuration
     DB_HOST: str = os.getenv('DB_HOST')
     DB_PORT: int = int(os.getenv('DB_PORT'))
@@ -31,3 +31,5 @@ class Settings(BaseSettings):
     # SQL Generation Prompt Configuration
     DIALECT: str = os.getenv('SQL_DIALECT')
     TOP_K: int = int(os.getenv('SQL_TOP_K'))
+
+    MAX_FILE_SIZE: int = int(os.getenv('MAX_FILE_SIZE',5*1024*1024))
