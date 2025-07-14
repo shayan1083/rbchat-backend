@@ -1,6 +1,6 @@
 from fastapi import UploadFile, HTTPException
 from settings import Settings
-from llm_logger import log_info, log_error
+from llm_logger import LLMLogger
 import json
 from pathlib import Path
 import pandas as pd
@@ -10,8 +10,11 @@ from settings import Settings
 import psycopg2
 from datetime import datetime
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+import numpy as np
 
 settings = Settings()
+
+logger = LLMLogger()
 
 connection_params = {
     "host": settings.DB_HOST,
@@ -50,7 +53,7 @@ async def process_file(file: UploadFile, session_id: str) -> dict:
     
     if file_extension in ['.csv']:
         df = pd.read_csv(io.BytesIO(content))
-        processed_data = df.to_dict('records')
+        processed_data = df.replace({np.nan: None}).to_dict('records')
         file_type = "csv"
         
     elif file_extension in ['.xlsx', '.xls']:
@@ -65,8 +68,7 @@ async def process_file(file: UploadFile, session_id: str) -> dict:
     elif file_extension in ['.txt']:
         processed_data = content.decode('utf-8')
         file_type = "text"
-
-        
+   
     elif file_extension in ['.pdf']:
         pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
         text_content = "".join([page.extract_text() for page in pdf_reader.pages])
@@ -74,9 +76,10 @@ async def process_file(file: UploadFile, session_id: str) -> dict:
         file_type = "pdf"
         
     else:
-        log_error(f'[FILE UPLOAD] Unsupported file type: {file_extension}')
+        logger.error(f'[FILE UPLOAD] Unsupported file type: {file_extension}')
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {file_extension}")
     
+
     with psycopg2.connect(**connection_params) as conn:
         with conn.cursor() as cur:
             cur.execute("""

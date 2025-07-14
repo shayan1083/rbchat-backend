@@ -1,8 +1,9 @@
 import psycopg2
 from settings import Settings
-from llm_logger import log_info, log_error
+from llm_logger import LLMLogger
 
 settings = Settings()
+logger = LLMLogger()
 
 class UserRepository:
     def __init__(self):
@@ -16,9 +17,9 @@ class UserRepository:
         self.conn = None
         try:
             self.conn = psycopg2.connect(**self.connection_params)
-            log_info("[UserRepository] Database connection established.")
+            logger.info("[UserRepository] Database connection established.")
         except Exception as e:
-            log_error(f"[UserRepository] Failed to connect to database: {e}")
+            logger.error(f"[UserRepository] Failed to connect to database: {e}")
         
     
     def __enter__(self):
@@ -27,11 +28,11 @@ class UserRepository:
     def __exit__(self, exc_type, exc_value, traceback):
         if self.conn:
             self.conn.close()
-            log_info("[UserRepository] Database connection closed.")
+            logger.info("[UserRepository] Database connection closed.")
 
         
     def get_tables_info(self):
-        log_info("[UserRepository] Fetching table and column info.")
+        logger.info("[UserRepository] Fetching table and column info.")
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute("""
@@ -79,7 +80,7 @@ class UserRepository:
             for table_comment, table, column, dtype, column_comment in rows:
                 table_dict.setdefault((table, table_comment), []).append((column, dtype, column_comment))
         except Exception as e:
-            log_error(f"[UserRepository] Failed to fetch table and column info: {e}")
+            logger.error(f"[UserRepository] Failed to fetch table and column info: {e}")
             return " "
         
         return "\n\n".join(
@@ -89,3 +90,21 @@ class UserRepository:
             )
             for (table, table_comment), cols in table_dict.items()
         )
+    
+    def estimate_tokens(self):
+        logger.info('[UserRepository] Fetching token amount of last call')
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                               SELECT total_tokens
+                               FROM llm_logs
+                               ORDER BY timestamp DESC
+                               LIMIT 1
+                               """)
+                row = cursor.fetchone()
+        except Exception as e:
+            logger.error(f"[User Repository] Failed to get last token call usage: {e}")
+            return 0
+
+        return row[0]
+                

@@ -3,9 +3,11 @@ import psycopg
 from langchain_postgres import PostgresChatMessageHistory
 from settings import Settings
 from langchain_core.chat_history import BaseChatMessageHistory
-from llm_logger import log_info
+from llm_logger import LLMLogger
 
 settings = Settings()
+
+logger = LLMLogger()
 
 
 def get_psycopg_conn():
@@ -21,7 +23,7 @@ def ensure_chat_history_table_exists():
     conn = get_psycopg_conn()
     try:
         PostgresChatMessageHistory.create_tables(conn, settings.DB_CHAT_HISTORY_TABLE)
-        log_info(f"Ensured chat history table '{settings.DB_CHAT_HISTORY_TABLE}' exists.")
+        logger.info(f"Ensured chat history table '{settings.DB_CHAT_HISTORY_TABLE}' exists.")
     finally:
         conn.close()
 
@@ -31,6 +33,7 @@ def generate_session_id() -> str:
 
 # Returns a ChatMessageHistory object tied to a session
 def get_session_history(session_id: str) -> BaseChatMessageHistory:
+    logger.info("Getting Session History")
     return PostgresChatMessageHistory(
         settings.DB_CHAT_HISTORY_TABLE,
         session_id,
