@@ -23,7 +23,7 @@ def ensure_chat_history_table_exists():
     conn = get_psycopg_conn()
     try:
         PostgresChatMessageHistory.create_tables(conn, settings.DB_CHAT_HISTORY_TABLE)
-        logger.info(f"Ensured chat history table '{settings.DB_CHAT_HISTORY_TABLE}' exists.")
+        logger.info(f"(API) Ensured chat history table '{settings.DB_CHAT_HISTORY_TABLE}' exists.")
     finally:
         conn.close()
 
@@ -33,7 +33,7 @@ def generate_session_id() -> str:
 
 # Returns a ChatMessageHistory object tied to a session
 def get_session_history(session_id: str) -> BaseChatMessageHistory:
-    logger.info("Getting Session History")
+    logger.info("(API) Getting Session History")
     return PostgresChatMessageHistory(
         settings.DB_CHAT_HISTORY_TABLE,
         session_id,

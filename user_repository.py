@@ -1,23 +1,25 @@
 import psycopg2
 from settings import Settings
 from llm_logger import LLMLogger
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+import json
 
 settings = Settings()
 logger = LLMLogger()
 
 class UserRepository:
-    def __init__(self):
+    def __init__(self, dbname: str = settings.DB_NAME):
         self.connection_params = {
             "host": settings.DB_HOST,
             "port": settings.DB_PORT,
             "user": settings.DB_USER,
             "password": settings.DB_PASSWORD,
-            "dbname": settings.DB_NAME,
+            "dbname": dbname,
         }
         self.conn = None
         try:
             self.conn = psycopg2.connect(**self.connection_params)
-            logger.info("[UserRepository] Database connection established.")
+            logger.info("(API) Database connection established.")
         except Exception as e:
             logger.error(f"[UserRepository] Failed to connect to database: {e}")
         
@@ -28,11 +30,11 @@ class UserRepository:
     def __exit__(self, exc_type, exc_value, traceback):
         if self.conn:
             self.conn.close()
-            logger.info("[UserRepository] Database connection closed.")
+            logger.info("(API) Database connection closed.")
 
         
     def get_tables_info(self):
-        logger.info("[UserRepository] Fetching table and column info.")
+        logger.info("(API) Fetching table and column info.")
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute("""
@@ -74,13 +76,14 @@ class UserRepository:
                         AND ns.nspname = 'public'
                         AND des.description IS NOT NULL
                     ) b on a.objoid  = b.oid
+                    where a.table_name  not in ('app_logs', 'chat_history', 'llm_logs', 'modified_files', 'uploaded_files')
                 """)
                 rows = cursor.fetchall()
             table_dict = {}
             for table_comment, table, column, dtype, column_comment in rows:
                 table_dict.setdefault((table, table_comment), []).append((column, dtype, column_comment))
         except Exception as e:
-            logger.error(f"[UserRepository] Failed to fetch table and column info: {e}")
+            logger.error(f"(API) Failed to fetch table and column info: {e}")
             return " "
         
         return "\n\n".join(
@@ -92,7 +95,7 @@ class UserRepository:
         )
     
     def estimate_tokens(self):
-        logger.info('[UserRepository] Fetching token amount of last call')
+        logger.info('(API) Fetching token amount of last call')
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute("""
@@ -103,8 +106,62 @@ class UserRepository:
                                """)
                 row = cursor.fetchone()
         except Exception as e:
-            logger.error(f"[User Repository] Failed to get last token call usage: {e}")
+            logger.error(f"(API) Failed to get last token call usage: {e}")
             return 0
 
-        return row[0]
+        if row and row[0] is not None:
+            return row[0]
+        else:
+            return 5000
+        
+    def get_database_names(self):
+        logger.info("(API) Fetching database names.")
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT id, name FROM databases_info;
+                """)
+                rows = cursor.fetchall()
+            return [row[0] for row in rows]
+        except Exception as e:
+            logger.error(f"(API) Failed to fetch database names: {e}")
+            return []
                 
+    def get_uploaded_data(self, session_id: str) -> dict:
+        logger.info(f"(API) Fetching uploaded data for session: {session_id}") 
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT data, file_type, filename FROM uploaded_files WHERE session_id = %s ORDER BY upload_time DESC LIMIT 1",
+                (session_id,)
+            )
+            result = cur.fetchone()
+            file_dict = {}
+            if result:
+                file_dict = {
+                    "data": result[0],  # JSON string
+                    "file_type": result[1],
+                    "filename": result[2],
+                }
+                file_dict = self._chunk_file(file_dict)
+                return file_dict
+
+            return None
+        
+    def _chunk_file(uploaded_data: dict, chunk_size: int = 500):
+        data = uploaded_data['data']
+        
+        # If data is a list of dicts, convert to CSV format
+        if isinstance(data, list) and all(isinstance(row, dict) for row in data):
+            import pandas as pd
+            df = pd.DataFrame(data)
+            data = df.to_csv(index=False)
+        
+        elif not isinstance(data, str):
+            # Fallback: stringify any other non-string content
+            data = json.dumps(data, indent=2)
+
+        splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=50)
+        chunks = splitter.split_text(data)
+        
+        uploaded_data['chunks'] = "\n\n".join(chunks)
+        return uploaded_data

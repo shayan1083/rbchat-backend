@@ -9,7 +9,8 @@ import PyPDF2
 from settings import Settings
 import psycopg2
 from datetime import datetime
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from user_repository import UserRepository
+
 import numpy as np
 
 settings = Settings()
@@ -35,9 +36,13 @@ def ensure_uploaded_files_table():
         upload_time TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     """
-    with psycopg2.connect(**connection_params) as conn:
-        with conn.cursor() as cur:
-            cur.execute(create_table_sql)
+    try:
+        with psycopg2.connect(**connection_params) as conn:
+            with conn.cursor() as cur:
+                cur.execute(create_table_sql)
+        logger.info('(API) Ensured uploaded_files exists')
+    except Exception as e:
+        logger.error(f'(API) Error ensuring uploaded_files exists: {e}')
 
 
 async def process_file(file: UploadFile, session_id: str) -> dict:
@@ -100,45 +105,11 @@ async def process_file(file: UploadFile, session_id: str) -> dict:
         "filename": filename
     }
 
-def get_uploaded_data(session_id: str):
-    with psycopg2.connect(**connection_params) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT data, file_type, filename FROM uploaded_files WHERE session_id = %s ORDER BY upload_time DESC LIMIT 1",
-                (session_id,)
-            )
-            result = cur.fetchone()
-            file_dict = {}
-            if result:
-                file_dict = {
-                    "data": result[0],  # JSON string
-                    "file_type": result[1],
-                    "filename": result[2],
-                }
-                file_dict = chunk_file(file_dict)
-                return file_dict
-
-            return None
-
-
-def chunk_file(uploaded_data: dict, chunk_size: int = 500):
-    data = uploaded_data['data']
-    
-    # If data is a list of dicts, convert to CSV format
-    if isinstance(data, list) and all(isinstance(row, dict) for row in data):
-        import pandas as pd
-        df = pd.DataFrame(data)
-        data = df.to_csv(index=False)
-    
-    elif not isinstance(data, str):
-        # Fallback: stringify any other non-string content
-        data = json.dumps(data, indent=2)
-
-    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=50)
-    chunks = splitter.split_text(data)
-    
-    uploaded_data['chunks'] = "\n\n".join(chunks)
-    return uploaded_data
+def get_uploaded_data(session_id: str, db_name: str = settings.DB_NAME) -> dict:
+    with UserRepository(dbname=db_name) as repo:
+        logger.info(f"(API) Fetching uploaded data for session: {session_id}") 
+        file_dict = repo.get_uploaded_data(session_id)
+        return file_dict
 
 def get_file_from_temp_table(id: int):
     query = """

@@ -8,13 +8,12 @@ from langchain_core.rate_limiters import InMemoryRateLimiter
 import traceback
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 import time
-import json
 import openai
-import re
+import json
 
 from llm_logger import LLMLogger
 from settings import Settings
-from db_memory import get_session_history, ensure_chat_history_table_exists
+from db_memory import get_session_history
 from prompts import sql_generation_template
 from user_repository import UserRepository
 
@@ -30,21 +29,19 @@ rate_limiter = InMemoryRateLimiter(
 )
 
 model = ChatOpenAI(model="gpt-4o", streaming=True, verbose=True, stream_usage=True)
-
-
-async def run_agent(prompt: str, session_id: str = "default", file_context: dict = None):   
+     
+async def run_agent(prompt: str, session_id: str = "default", file_context: dict = None, db_name: str = settings.DB_NAME):   
     try:
         logger.info(f"Using LLM Model: {model.model_name}")
         logger.info(f"User Prompt: {prompt}")
         start_time = time.perf_counter()
-        ensure_chat_history_table_exists()
-        async with streamablehttp_client(url=settings.MCP_SERVER_URL) as (read, write, _):
+        async with streamablehttp_client(url=settings.MCP_SERVER_URL,headers={'db_name':db_name}) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
 
                 tools = await load_mcp_tools(session)  
 
-                agent_prompt = create_prompt(file_context)
+                agent_prompt = create_prompt(db_name, file_context)
                 agent = create_react_agent(model, tools, prompt=agent_prompt)
 
                 history = get_session_history(session_id)
@@ -72,39 +69,21 @@ async def run_agent(prompt: str, session_id: str = "default", file_context: dict
                         tool_name = event["name"]
                         logger.info(f"Tool Used: {tool_name}") 
 
-                history.add_message(HumanMessage(content=prompt))
-                history.add_message(AIMessage(content=full_response))
-
-                logger.info(f"Full Response: {full_response}")
-                elapsed_time = time.perf_counter() - start_time
-                logger.info(f"Elapsed Time: {elapsed_time:.2f} seconds")
-
-                token_usage = {
-                    "input_tokens": input_tokens,
-                    "output_tokens": output_tokens,
-                    "total_tokens": total_tokens
-                }
-
-                logger.info(f"Token Usage: {token_usage}")
-                logger.log_llm_use(
-                    model.model_name,
-                    prompt,
-                    full_response,
-                    token_usage.get("input_tokens"),
-                    token_usage.get("output_tokens"),
-                    token_usage.get("total_tokens"),
-                    tool_name
+                logger.log_on_chat_end(
+                    history, prompt, full_response, start_time, input_tokens, output_tokens, total_tokens, model, tool_name
                 )
+                yield f"event: end\ndata: {json.dumps({'message': 'stream complete'})}\n\n"
                 logger.info("[END] Process Finished")
 
     except Exception as e:
         logger.error(f"run_agent error: {traceback.format_exc()}")
         message = find_ratelimit_error(e)
         if message is not None:
-            yield f"data: {message}.\n\n"
+            print(message)
+            yield f"event: error\ndata: {json.dumps({'message': message})}\n\n"
         else:
-            yield f"data: It seems there was an error. Please try again later.\n\n"
-     
+            yield f"event: error\ndata: {json.dumps({'message': 'It seems there was an error. Please try again later.'})}\n\n"
+
 def find_ratelimit_error(exc):
     while exc:
         if isinstance(exc, openai.RateLimitError):
@@ -112,9 +91,11 @@ def find_ratelimit_error(exc):
         exc = exc.__cause__ or exc.__context__
     return None
 
-def create_prompt(file_context: dict = None):
+
+
+def create_prompt(db_name: str, file_context: dict = None):
     """Format and update the agent prompt with table schema and file content"""
-    with UserRepository() as repo:
+    with UserRepository(dbname=db_name) as repo:
         schema_info = repo.get_tables_info()
 
     formatted_sql_prompt = sql_generation_template.format(
