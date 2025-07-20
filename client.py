@@ -16,6 +16,7 @@ from settings import Settings
 from db_memory import get_session_history
 from prompts import sql_generation_template
 from user_repository import UserRepository
+from file_upload import get_uploaded_data
 
 
 settings = Settings()
@@ -30,7 +31,7 @@ rate_limiter = InMemoryRateLimiter(
 
 model = ChatOpenAI(model="gpt-4o", streaming=True, verbose=True, stream_usage=True)
      
-async def run_agent(prompt: str, session_id: str = "default", file_context: dict = None, db_name: str = settings.DB_NAME):   
+async def run_agent(prompt: str, session_id: str = "default", db_name: str = settings.DB_NAME):   
     try:
         logger.info(f"Using LLM Model: {model.model_name}")
         logger.info(f"User Prompt: {prompt}")
@@ -41,6 +42,7 @@ async def run_agent(prompt: str, session_id: str = "default", file_context: dict
 
                 tools = await load_mcp_tools(session)  
 
+                file_context = get_uploaded_data(session_id)
                 agent_prompt = create_prompt(db_name, file_context)
                 agent = create_react_agent(model, tools, prompt=agent_prompt)
 
@@ -65,6 +67,9 @@ async def run_agent(prompt: str, session_id: str = "default", file_context: dict
                         if hasattr(chunk, "content") and chunk.content:
                             full_response += chunk.content
                             yield f"data: {chunk.content}\n\n"
+                    # elif event["event"] == "on_chat_model_start":
+                    #     logger.info(f"Model started") 
+                    #     yield f"event: modelstart\ndata: {json.dumps({'message': 'model started'})}\n\n"
                     elif event["event"] == "on_tool_start":
                         tool_name = event["name"]
                         logger.info(f"Tool Used: {tool_name}") 
@@ -102,13 +107,27 @@ def create_prompt(db_name: str, file_context: dict = None):
         dialect=settings.DIALECT,
         top_k=settings.TOP_K,
         tables_info=schema_info,
-        export_k=settings.EXPORT_TOP_K
+        export_k=settings.EXPORT_TOP_K,
+        newline=settings.NEWLINE_CHAR
     )
     combined_prompt = formatted_sql_prompt
     if file_context:
+        if isinstance(file_context['data'], list):
+        # Convert list of dicts to a CSV-like string
+            formatted_data = json.dumps(file_context['data'], indent=2)
+        elif isinstance(file_context['data'], str):
+            # Already a string, like from a .txt file
+            formatted_data = file_context['data']
+        else:
+            # Fallback for unexpected data types
+            formatted_data = json.dumps(file_context['data'], indent=2)
+
+        # Escape braces for prompt injection safety
+        escaped_content = formatted_data.replace("{", "{{").replace("}", "}}")
+        
         combined_prompt += '\n\nAdditional file context provided by user:\n'
         combined_prompt += f'File Name: {file_context["filename"]}\n' 
-        escaped_content = file_context['chunks'].replace("{", "{{").replace("}", "}}")
+        escaped_content = file_context['data'].replace("{", "{{").replace("}", "}}")
         combined_prompt += f'File Content: \n\n{escaped_content}'
 
     agent_prompt = ChatPromptTemplate.from_messages([

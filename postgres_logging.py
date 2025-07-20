@@ -6,33 +6,6 @@ class PostgresHandler(logging.Handler):
     def __init__(self, connection_params):
         super().__init__()
         self.connection_params = connection_params
-        self._ensure_table_exists()
-
-    def _ensure_table_exists(self):
-        create_table_sql = """
-        CREATE TABLE IF NOT EXISTS app_logs (
-            id SERIAL PRIMARY KEY,
-            timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            level TEXT NOT NULL,
-            message TEXT NOT NULL,
-            logger_name TEXT,
-            module TEXT,
-            function TEXT,
-            line_number INT
-        );
-        """
-        conn = None
-        try:
-            conn = psycopg2.connect(**self.connection_params)
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute(create_table_sql)
-        except Exception as e:
-            print(f"[PostgresHandler Error] Failed to ensure table exists: {e}")
-        finally:
-            if conn:
-                conn.close()
-
 
     def emit(self, record):
         try:

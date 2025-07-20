@@ -25,24 +25,6 @@ connection_params = {
     "dbname": settings.DB_NAME,
 }
 
-def ensure_uploaded_files_table():
-    create_table_sql = """
-    CREATE TABLE IF NOT EXISTS uploaded_files (
-        id SERIAL PRIMARY KEY,
-        session_id TEXT NOT NULL,
-        filename TEXT NOT NULL,
-        file_type TEXT NOT NULL,
-        data JSONB NOT NULL,
-        upload_time TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-    """
-    try:
-        with psycopg2.connect(**connection_params) as conn:
-            with conn.cursor() as cur:
-                cur.execute(create_table_sql)
-        logger.info('(API) Ensured uploaded_files exists')
-    except Exception as e:
-        logger.error(f'(API) Error ensuring uploaded_files exists: {e}')
 
 
 async def process_file(file: UploadFile, session_id: str) -> dict:
@@ -56,33 +38,35 @@ async def process_file(file: UploadFile, session_id: str) -> dict:
     
     processed_data = None
     
-    if file_extension in ['.csv']:
-        df = pd.read_csv(io.BytesIO(content))
-        processed_data = df.replace({np.nan: None}).to_dict('records')
-        file_type = "csv"
+    # if file_extension in ['.csv']:
+    #     df = pd.read_csv(io.BytesIO(content))
+    #     processed_data = df.replace({np.nan: None}).to_dict('records')
+    #     file_type = "csv"
         
-    elif file_extension in ['.xlsx', '.xls']:
-        df = pd.read_excel(io.BytesIO(content))
-        processed_data = df.to_dict('records')
-        file_type = "excel"
+    # if file_extension in ['.xlsx', '.xls']:
+    #     df = pd.read_excel(io.BytesIO(content))
+    #     # processed_data = df.to_dict('records')
+    #     processed_data = df.replace({np.nan: None}).to_dict(orient='records')
+
         
-    elif file_extension in ['.json']:
-        processed_data = json.loads(content.decode('utf-8'))
-        file_type = "json"
+    # elif file_extension in ['.json']:
+    #     processed_data = json.loads(content.decode('utf-8'))
+    #     file_type = "json"
         
-    elif file_extension in ['.txt']:
-        processed_data = content.decode('utf-8')
-        file_type = "text"
+    #elif file_extension in ['.txt']:
+    # else:
+    processed_data = content.decode('utf-8')
+        #file_type = "text"
    
-    elif file_extension in ['.pdf']:
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
-        text_content = "".join([page.extract_text() for page in pdf_reader.pages])
-        processed_data = text_content
-        file_type = "pdf"
+    # elif file_extension in ['.pdf']:
+    #     pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+    #     text_content = "".join([page.extract_text() for page in pdf_reader.pages])
+    #     processed_data = text_content
+    #     file_type = "pdf"
         
-    else:
-        logger.error(f'[FILE UPLOAD] Unsupported file type: {file_extension}')
-        raise HTTPException(status_code=400, detail=f"Unsupported file type: {file_extension}")
+    # else:
+    #     logger.error(f'[FILE UPLOAD] Unsupported file type: {file_extension}')
+    #     raise HTTPException(status_code=400, detail=f"Unsupported file type: {file_extension}")
     
 
     with psycopg2.connect(**connection_params) as conn:
@@ -93,7 +77,7 @@ async def process_file(file: UploadFile, session_id: str) -> dict:
             """, (
                 session_id,
                 filename,
-                file_type,
+                file_extension,
                 json.dumps(processed_data),
                 datetime.now()
             ))
@@ -101,12 +85,12 @@ async def process_file(file: UploadFile, session_id: str) -> dict:
     return {
         "message": "File uploaded and processed successfully",
         "session_id": session_id,
-        "file_type": file_type,
+        "file_type": file_extension,
         "filename": filename
     }
 
-def get_uploaded_data(session_id: str, db_name: str = settings.DB_NAME) -> dict:
-    with UserRepository(dbname=db_name) as repo:
+def get_uploaded_data(session_id: str) -> dict:
+    with UserRepository() as repo:
         logger.info(f"(API) Fetching uploaded data for session: {session_id}") 
         file_dict = repo.get_uploaded_data(session_id)
         return file_dict

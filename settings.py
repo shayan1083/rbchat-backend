@@ -32,5 +32,6 @@ class Settings(BaseSettings):
     DIALECT: str = os.getenv('SQL_DIALECT')
     TOP_K: int = int(os.getenv('SQL_TOP_K'))
     EXPORT_TOP_K: int = int(os.getenv('EXPORT_TOP_K'))
+    NEWLINE_CHAR: str = os.getenv('NEWLINE_CHAR', '^')
 
     MAX_FILE_SIZE: int = int(os.getenv('MAX_FILE_SIZE',5*1024*1024))

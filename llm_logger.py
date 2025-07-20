@@ -28,34 +28,8 @@ class LLMLogger:
         if self.settings.ENABLE_LOGGING and not self.logger.handlers:
             pg_handler = PostgresHandler(self.connection_params)
             pg_handler.setLevel(log_level)
-            self.logger.addHandler(pg_handler)
+            self.logger.addHandler(pg_handler)    
 
-            self.ensure_llm_logs_table()
-        
-    
-    def ensure_llm_logs_table(self):
-        try:
-            conn = psycopg2.connect(**self.connection_params)
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS llm_logs (
-                            id SERIAL PRIMARY KEY,
-                            timestamp TIMESTAMP with time zone,
-                            model_name TEXT NOT null,
-                            prompt TEXT NOT NULL,
-                            response TEXT NOT NULL,
-                            input_tokens INT,
-                            output_tokens INT,
-                            total_tokens INT,
-                            tool_name TEXT
-                        );
-                    """)
-        except Exception as e:
-            self.logger.error(f"Failed to create llm_logs table: {e}")
-        finally:
-            if conn:
-                conn.close()
 
     def info(self, message: str):
         self.logger.info(message, stacklevel=2)
