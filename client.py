@@ -43,7 +43,7 @@ async def run_agent(prompt: str, session_id: str = "default", db_name: str = set
                 tools = await load_mcp_tools(session)  
 
                 file_context = get_uploaded_data(session_id)
-                agent_prompt = create_prompt(db_name, file_context)
+                agent_prompt, combined_prompt = create_prompt(db_name, file_context)
                 agent = create_react_agent(model, tools, prompt=agent_prompt)
 
                 history = get_session_history(session_id)
@@ -67,15 +67,12 @@ async def run_agent(prompt: str, session_id: str = "default", db_name: str = set
                         if hasattr(chunk, "content") and chunk.content:
                             full_response += chunk.content
                             yield f"data: {chunk.content}\n\n"
-                    # elif event["event"] == "on_chat_model_start":
-                    #     logger.info(f"Model started") 
-                    #     yield f"event: modelstart\ndata: {json.dumps({'message': 'model started'})}\n\n"
                     elif event["event"] == "on_tool_start":
                         tool_name = event["name"]
                         logger.info(f"Tool Used: {tool_name}") 
 
                 logger.log_on_chat_end(
-                    history, prompt, full_response, start_time, input_tokens, output_tokens, total_tokens, model, tool_name
+                    history, combined_prompt, full_response, start_time, input_tokens, output_tokens, total_tokens, model, tool_name
                 )
                 yield f"event: end\ndata: {json.dumps({'message': 'stream complete'})}\n\n"
                 logger.info("[END] Process Finished")
@@ -135,4 +132,4 @@ def create_prompt(db_name: str, file_context: dict = None):
         MessagesPlaceholder(variable_name="messages")
     ])
 
-    return agent_prompt
+    return agent_prompt, combined_prompt

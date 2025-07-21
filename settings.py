@@ -34,4 +34,4 @@ class Settings(BaseSettings):
     EXPORT_TOP_K: int = int(os.getenv('EXPORT_TOP_K'))
     NEWLINE_CHAR: str = os.getenv('NEWLINE_CHAR', '^')
 
-    MAX_FILE_SIZE: int = int(os.getenv('MAX_FILE_SIZE',5*1024*1024))
+    MAX_FILE_SIZE: int = int(os.getenv('MAX_FILE_SIZE',5242880))

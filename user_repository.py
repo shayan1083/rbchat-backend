@@ -144,26 +144,7 @@ class UserRepository:
                     "file_type": result[1],
                     "filename": result[2],
                 }
-                # file_dict = self._chunk_file(file_dict)
                 return file_dict
 
             return None
         
-    # def _chunk_file(uploaded_data: dict, chunk_size: int = 500):
-    #     data = uploaded_data['data']
-        
-    #     # If data is a list of dicts, convert to CSV format
-    #     if isinstance(data, list) and all(isinstance(row, dict) for row in data):
-    #         import pandas as pd
-    #         df = pd.DataFrame(data)
-    #         data = df.to_csv(index=False)
-        
-    #     elif not isinstance(data, str):
-    #         # Fallback: stringify any other non-string content
-    #         data = json.dumps(data, indent=2)
-
-    #     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=50)
-    #     chunks = splitter.split_text(data)
-        
-    #     uploaded_data['chunks'] = "\n\n".join(chunks)
-    #     return uploaded_data
