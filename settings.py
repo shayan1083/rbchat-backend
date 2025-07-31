@@ -35,3 +35,7 @@ class Settings(BaseSettings):
     NEWLINE_CHAR: str = os.getenv('NEWLINE_CHAR', '^')
 
     MAX_FILE_SIZE: int = int(os.getenv('MAX_FILE_SIZE',5242880))
+
+    SECRET_KEY: str = os.getenv('AUTH_SECRET_KEY')
+    ALGORITHM: str = os.getenv('HASH_ALGORITHM', 'HS256')
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES', 30))
