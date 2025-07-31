@@ -22,6 +22,8 @@ def create_tables():
     ensure_uploaded_files_table()
     ensure_modified_files_table()
     ensure_db_table()
+    ensure_roles_table()
+    ensure_users_table()
     
 
 
@@ -128,3 +130,51 @@ def ensure_modified_files_table():
         logger.info('(API) Ensured modified_files exists')
     except Exception as e:
         logger.error(f'(API) Error ensuring modified_files table: {e}')
+
+def ensure_users_table():
+    create_table_sql = """
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT NOT NULL UNIQUE,
+            email TEXT NOT NULL UNIQUE,
+            full_name TEXT,
+            role TEXT NOT NULL DEFAULT 'user' REFERENCES roles(name),
+            location TEXT,
+            last_login TIMESTAMPTZ,
+            hashed_password TEXT NOT NULL,
+            disabled BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+    """
+    try:
+        with psycopg2.connect(**connection_params) as conn:
+            with conn.cursor() as cur:
+                cur.execute(create_table_sql)
+        logger.info('(API) Ensured users table exists')
+    except Exception as e:
+        logger.error(f'(API) Error ensuring users table exists: {e}')
+
+def ensure_roles_table():
+    create_table_sql = """
+        CREATE TABLE roles (
+            id SERIAL PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL,
+            description TEXT
+        );
+    """
+
+    insert_default_roles_sql = """
+        INSERT INTO roles (name, description) VALUES
+            ('user', 'Standard user with basic permissions'),
+            ('admin', 'Administrator with full access')
+        ON CONFLICT (name) DO NOTHING;
+    """
+    try:
+        with psycopg2.connect(**connection_params) as conn:
+            with conn.cursor() as cur:
+                cur.execute(create_table_sql)
+                cur.execute(insert_default_roles_sql)
+        logger.info('(API) Ensured roles table and default roles exist')
+    except Exception as e:
+        logger.error(f'(API) Error ensuring roles table exists: {e}')
+
