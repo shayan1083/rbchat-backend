@@ -44,6 +44,7 @@ async def run_agent(prompt: str, session_id: str = "default", db_name: str = set
 
                 file_context = get_uploaded_data(session_id)
                 agent_prompt, combined_prompt = create_prompt(db_name, file_context)
+                combined_prompt += prompt
                 agent = create_react_agent(model, tools, prompt=agent_prompt)
 
                 history = get_session_history(session_id)
