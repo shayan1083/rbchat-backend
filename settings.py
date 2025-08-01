@@ -1,37 +1,46 @@
-import os
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
-env_path = ".env"
-load_dotenv(env_path)
+# env_path = ".env"
+load_dotenv()
 
 class Settings(BaseSettings):
+    OPENAI_API_KEY: str
     # Chat history memory
-    MEMORY_LIMIT: int = int(os.getenv('MEMORY_LIMIT', 10))
+    MEMORY_LIMIT: int = 10
     
     # Database configuration
-    DB_HOST: str = os.getenv('DB_HOST')
-    DB_PORT: int = int(os.getenv('DB_PORT'))
-    DB_USER: str = os.getenv('DB_USER')
-    DB_PASSWORD: str = os.getenv('DB_PASSWORD')
-    DB_NAME: str = os.getenv('DB_NAME')
-    DB_CHAT_HISTORY_TABLE: str = os.getenv('DB_CHAT_HISTORY_TABLE')
+    DB_HOST: str = 'localhost'
+    DB_PORT: int = 5432
+    DB_USER: str = 'postgres'
+    DB_PASSWORD: str 
+    DB_NAME: str = 'main'
+    DB_CHAT_HISTORY_TABLE: str = 'chat_history'
 
-    MCP_SERVER_HOST: str = os.getenv('MCP_SERVER_HOST')
-    MCP_SERVER_PORT: str = os.getenv('MCP_SERVER_PORT')
-    MCP_SERVER_URL: str = f"http://{MCP_SERVER_HOST}:{MCP_SERVER_PORT}/mcp-server/mcp"
+    MCP_SERVER_HOST: str 
+    MCP_SERVER_PORT: str 
     
-    ALLOWED_ORIGINS: str = os.getenv('ALLOWED_ORIGINS', '*')
-    FASTAPI_HOST: str = os.getenv('FASTAPI_URL', "127.0.0.1")
-    FASTAPI_PORT: int = int(os.getenv('FASTAPI_PORT', 8003))
     
-    ENABLE_LOGGING: bool= os.getenv('ENABLE_LOGGING')
-    LOG_LEVEL: str = os.getenv('LOG_LEVEL', 'INFO')
+    ALLOWED_ORIGINS: str = 'http://localhost:5173'
+    FASTAPI_HOST: str 
+    FASTAPI_PORT: int
+    
+    ENABLE_LOGGING: bool = True
+    LOG_LEVEL: str = 'INFO'
 
     # SQL Generation Prompt Configuration
-    DIALECT: str = os.getenv('SQL_DIALECT')
-    TOP_K: int = int(os.getenv('SQL_TOP_K'))
-    EXPORT_TOP_K: int = int(os.getenv('EXPORT_TOP_K'))
-    NEWLINE_CHAR: str = os.getenv('NEWLINE_CHAR', '^')
+    DIALECT: str = 'postgresql'
+    TOP_K: int = 20
+    EXPORT_TOP_K: int = 10000
+    NEWLINE_CHAR: str  = '^'
+    FOLLOWUP_CHAR: str = '~'
 
-    MAX_FILE_SIZE: int = int(os.getenv('MAX_FILE_SIZE',5242880))
+    MAX_FILE_SIZE: int = 5242880
+
+    @property
+    def MCP_SERVER_URL(self) -> str:
+        return f"http://{self.MCP_SERVER_HOST}:{self.MCP_SERVER_PORT}/mcp-server/mcp"
+
+    class Config:
+        env_file = ".env"
+        extra = "allow"

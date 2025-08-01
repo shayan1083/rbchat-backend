@@ -106,7 +106,7 @@ def create_prompt(db_name: str, file_context: dict = None):
         top_k=settings.TOP_K,
         tables_info=schema_info,
         export_k=settings.EXPORT_TOP_K,
-        newline=settings.NEWLINE_CHAR
+        newline=settings.NEWLINE_CHAR,
     )
     combined_prompt = formatted_sql_prompt
     if file_context:
