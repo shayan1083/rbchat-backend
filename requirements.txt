@@ -36,7 +36,7 @@ markdown-it-py==3.0.0
 mcp==1.9.4
 mdurl==0.1.2
 numpy==1.26.4
-openai==1.88.0
+openai==1.98.0
 openapi-pydantic==0.5.1
 orjson==3.10.18
 ormsgpack==1.10.0
