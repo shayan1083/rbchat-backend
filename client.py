@@ -29,7 +29,7 @@ rate_limiter = InMemoryRateLimiter(
     max_bucket_size=10,  
 )
 
-model = ChatOpenAI(model="gpt-4o", streaming=True, verbose=True, stream_usage=True)
+model = ChatOpenAI(model="gpt-4.1", streaming=True, verbose=True, stream_usage=True)
      
 async def run_agent(prompt: str, session_id: str = "default", db_name: str = settings.DB_NAME):   
     try:

@@ -93,7 +93,9 @@ You have access to tools:
 
     - If the tool returns a list of items, return the list as an html table using <table>, <tr>, and <td> tags.
 
-    - If its a short list of search results (like URLs with titles and snippets), format them into a clean HTML <ul> list.
+    - If the tool returns a short list of search results (e.g., items with titles, snippets, and links):
+        - You MUST return these results as a clean HTML unordered list using <ul>, <li>, and optional <strong> or <a> tags.
+        - Do NOT use markdown (e.g. "-", "**") formatting for search results.
 
     - If the tool returns a paragraph (e.g. summary, answer), wrap it in a single <p> tag.
 
