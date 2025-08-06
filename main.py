@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from settings import Settings
 from db_memory import generate_session_id
 from llm_logger import LLMLogger
+import uvicorn
 
 from file_upload import process_file, get_file_from_temp_table
 import io
@@ -106,8 +107,8 @@ async def secure_data(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
     return {"user": request.state.user, "message": "This is protected data"}
 
-# if __name__ == "__main__":
-#     uvicorn.run("main:app", host=settings.FASTAPI_HOST, port=settings.FASTAPI_PORT)
+if __name__ == "__main__":
+    uvicorn.run("main:app", host=settings.FASTAPI_HOST, port=settings.FASTAPI_PORT)
     
 
 # uvicorn main:app --reload --port 8003

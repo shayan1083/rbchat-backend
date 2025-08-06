@@ -152,7 +152,7 @@ class UserRepository:
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute("""
-                    SELECT username, full_name, email, location, last_login, hashed_password, disabled
+                    SELECT username, full_name, email, location, last_login, hashed_password, disabled, role
                     FROM users
                     WHERE username = %s;
                 """, (username,))
@@ -170,7 +170,8 @@ class UserRepository:
                 "location": row[3],
                 "lastLogin": row[4].isoformat() if row[4] else None,
                 "hashed_password": row[5],
-                "disabled": row[6]
+                "disabled": row[6],
+                "role": row[7]
             }
             return user_dict  # Or `return UserInDB(**user_dict)` if you're using the Pydantic model directly
 

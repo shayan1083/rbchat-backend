@@ -3,14 +3,13 @@ from typing import Annotated
 
 from fastapi import Depends, APIRouter, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jwt.exceptions import InvalidTokenError
+from fastapi.responses import JSONResponse
 from passlib.context import CryptContext
 from pydantic import BaseModel
 from settings import Settings
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse
 import jwt
 
 from user_repository import UserRepository
@@ -24,9 +23,14 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+class TokenWithRefresh(Token):
+    refresh_token: str
 
 class TokenData(BaseModel):
     username: str | None = None
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
 
 
 class User(BaseModel):
@@ -57,9 +61,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
                     )
                     request.state.user = payload.get("sub")  # Store user info
                 except jwt.PyJWTError:
-                    return JSONResponse(status_code=401, content={"detail": "Invalid token"})
+                    raise HTTPException(status_code=401, detail="Invalid token")
             else:
-                return JSONResponse(status_code=401, content={"detail": "Invalid auth scheme"})
+                raise HTTPException(status_code=401, detail="Invalid auth scheme")
         else:
             request.state.user = None  # Optional: allow anonymous access
 
@@ -112,8 +116,9 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
-    except InvalidTokenError:
+    except jwt.PyJWTError:
         raise credentials_exception
+    
     user = get_user(username=token_data.username)
     if user is None:
         raise credentials_exception
@@ -132,7 +137,7 @@ def role_required(required_roles: list[str]):
         return user
     return role_checker
 
-@router.post("/token")
+@router.post("/token", response_model=Token)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
@@ -143,11 +148,57 @@ async def login_for_access_token(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
     access_token = create_access_token(
-        data={"sub": user.username, "role": user.role}, expires_delta=access_token_expires
+        data={"sub": user.username, "role": user.role},
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    return Token(access_token=access_token, token_type="bearer")
+   
+    refresh_token = create_access_token(
+        data={"sub": user.username},
+        expires_delta=timedelta(days=7)
+    )
+
+    response = JSONResponse(content={"access_token": access_token, "token_type": "bearer"})
+    
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,          # Use only in production (HTTPS)
+        samesite="lax",    # You can use "lax" if needed
+        max_age=7 * 24 * 3600,
+       
+        )
+
+    return response
+
+@router.post("/refresh", response_model=Token)
+async def refresh_access_token(request: Request):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Refresh token missing")
+    try:
+        payload_data = jwt.decode(
+            refresh_token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
+        )
+        username = payload_data.get('sub')
+        if username is None:
+            raise HTTPException(status_code=401, detail='Invalid refresh token')
+        
+        user = get_user(username)
+        if not user:
+            raise HTTPException(status_code=401, detail='User not found')
+        
+        new_access_token = create_access_token(
+            data={"sub":user.username, "role":user.role},
+            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
+        return Token(access_token=new_access_token, token_type="bearer")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail='Invalid refresh token')
 
 
 @router.get("/user/me", response_model=User)
