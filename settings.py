@@ -6,10 +6,8 @@ load_dotenv()
 
 class Settings(BaseSettings):
     OPENAI_API_KEY: str
-    # Chat history memory
     MEMORY_LIMIT: int = 10
     
-    # Database configuration
     DB_HOST: str = 'localhost'
     DB_PORT: int = 5432
     DB_USER: str = 'postgres'
@@ -28,14 +26,19 @@ class Settings(BaseSettings):
     ENABLE_LOGGING: bool = True
     LOG_LEVEL: str = 'INFO'
 
-    # SQL Generation Prompt Configuration
     DIALECT: str = 'postgresql'
     TOP_K: int = 20
     EXPORT_TOP_K: int = 10000
     NEWLINE_CHAR: str  = '^'
     FOLLOWUP_CHAR: str = '~'
 
+
     MAX_FILE_SIZE: int = 5242880
+
+
+    SECRET_KEY: str 
+    ALGORITHM: str 
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
 
     @property
     def MCP_SERVER_URL(self) -> str:
@@ -44,3 +47,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         extra = "allow"
+
+
+    
+

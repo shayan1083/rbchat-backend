@@ -1,8 +1,7 @@
 import psycopg2
 from settings import Settings
 from llm_logger import LLMLogger
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-import json
+
 
 settings = Settings()
 logger = LLMLogger()
@@ -147,4 +146,37 @@ class UserRepository:
                 return file_dict
 
             return None
-        
+    
+    def get_user_by_username(self, username: str):
+        logger.info(f"(API) Fetching user by username: {username}")
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT username, full_name, email, location, last_login, hashed_password, disabled, role
+                    FROM users
+                    WHERE username = %s;
+                """, (username,))
+                row = cursor.fetchone()
+
+            if not row:
+                logger.warning(f"(API) User '{username}' not found.")
+                return None
+
+            # Create UserInDB-compatible dictionary
+            user_dict = {
+                "username": row[0],
+                "full_name": row[1],
+                "email": row[2],
+                "location": row[3],
+                "lastLogin": row[4].isoformat() if row[4] else None,
+                "hashed_password": row[5],
+                "disabled": row[6],
+                "role": row[7]
+            }
+            return user_dict  # Or `return UserInDB(**user_dict)` if you're using the Pydantic model directly
+
+        except Exception as e:
+            logger.error(f"(API) Error fetching user '{username}': {e}")
+            return None
+
+    
