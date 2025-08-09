@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import Depends, APIRouter, HTTPException, status
+from fastapi import Depends, APIRouter, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from passlib.context import CryptContext
@@ -17,6 +17,8 @@ from user_repository import UserRepository
 settings = Settings()
 
 router = APIRouter()
+
+REFRESH_TOKEN='refresh_token'
 
 
 class Token(BaseModel):
@@ -175,7 +177,7 @@ async def login_for_access_token(
 
 @router.post("/refresh", response_model=Token)
 async def refresh_access_token(request: Request):
-    refresh_token = request.cookies.get("refresh_token")
+    refresh_token = request.cookies.get(REFRESH_TOKEN)
     if not refresh_token:
         raise HTTPException(status_code=401, detail="Refresh token missing")
     try:
@@ -200,6 +202,11 @@ async def refresh_access_token(request: Request):
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail='Invalid refresh token')
 
+@router.get("/logout")
+async def logout_user(response: Response):
+    response = JSONResponse(content={"detail": "Logged out successfully"})
+    response.delete_cookie(key="refresh_token",)
+    return response
 
 @router.get("/user/me", response_model=User)
 async def read_users_me(current_user: Annotated[User, Depends(get_current_active_user)]):
