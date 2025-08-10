@@ -23,13 +23,10 @@ settings = Settings()
 
 logger = LLMLogger()
 
-rate_limiter = InMemoryRateLimiter(
-    requests_per_second=2,  
-    check_every_n_seconds=0.1, 
-    max_bucket_size=10,  
-)
 
 model = ChatOpenAI(model="gpt-4.1", streaming=True, verbose=True, stream_usage=True)
+# tool = {"type": "web_search_preview"}
+# model = model.bind_tools([tool])
      
 async def run_agent(prompt: str, session_id: str = "default", db_name: str = settings.DB_NAME):   
     try:
@@ -38,9 +35,14 @@ async def run_agent(prompt: str, session_id: str = "default", db_name: str = set
         start_time = time.perf_counter()
         async with streamablehttp_client(url=settings.MCP_SERVER_URL,headers={'db_name':db_name}) as (read, write, _):
             async with ClientSession(read, write) as session:
+                setup_time = time.perf_counter()
                 await session.initialize()
 
                 tools = await load_mcp_tools(session)  
+                #web_search_tool = {"type": "web_search_preview"}
+                #all_tools = tools + [web_search_tool]
+
+                #model = model.bind_tools(web_search_tool)
 
                 file_context = get_uploaded_data(session_id)
                 agent_prompt, combined_prompt = create_prompt(db_name, file_context)
@@ -57,6 +59,11 @@ async def run_agent(prompt: str, session_id: str = "default", db_name: str = set
                 total_tokens = None
                 tool_name = None
 
+                finish_setup = time.perf_counter() - setup_time
+                logger.info(f'(API) Pre Streaming Setup Time: {finish_setup}')
+
+                stream_time_start = time.perf_counter()
+
                 async for event in agent.astream_events({"messages": messages}, version="v2"):  
                     if event["event"] == "on_chat_model_stream":
                         chunk = event["data"]["chunk"]
@@ -71,6 +78,9 @@ async def run_agent(prompt: str, session_id: str = "default", db_name: str = set
                     elif event["event"] == "on_tool_start":
                         tool_name = event["name"]
                         logger.info(f"Tool Used: {tool_name}") 
+
+                stream_time_end = time.perf_counter() - stream_time_start
+                logger.info(f"Streaming time elapsed: {stream_time_end}")
 
                 logger.log_on_chat_end(
                     history, combined_prompt, full_response, start_time, input_tokens, output_tokens, total_tokens, model, tool_name
