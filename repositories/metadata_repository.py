@@ -1,12 +1,11 @@
 import psycopg2
-from settings import Settings
-from llm_logger import LLMLogger
-
+from config.settings import Settings
+from custom_logging.llm_logger import LLMLogger
 
 settings = Settings()
 logger = LLMLogger()
 
-class UserRepository:
+class MetadataRepository:
     def __init__(self, dbname: str = settings.DB_NAME):
         self.connection_params = {
             "host": settings.DB_HOST,
@@ -18,9 +17,8 @@ class UserRepository:
         self.conn = None
         try:
             self.conn = psycopg2.connect(**self.connection_params)
-            logger.info("(API) Database connection established.")
         except Exception as e:
-            logger.error(f"[UserRepository] Failed to connect to database: {e}")
+            logger.error(f"[MetadataRepository] Failed to connect to database: {e}")
         
     
     def __enter__(self):
@@ -29,11 +27,9 @@ class UserRepository:
     def __exit__(self, exc_type, exc_value, traceback):
         if self.conn:
             self.conn.close()
-            logger.info("(API) Database connection closed.")
 
-        
     def get_tables_info(self):
-        logger.info("(API) Fetching table and column info.")
+        #logger.info("(API) Fetching table and column info.")
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute("""
@@ -92,29 +88,10 @@ class UserRepository:
             )
             for (table, table_comment), cols in table_dict.items()
         )
-    
-    def estimate_tokens(self):
-        logger.info('(API) Fetching token amount of last call')
-        try:
-            with self.conn.cursor() as cursor:
-                cursor.execute("""
-                               SELECT total_tokens
-                               FROM llm_logs
-                               ORDER BY timestamp DESC
-                               LIMIT 1
-                               """)
-                row = cursor.fetchone()
-        except Exception as e:
-            logger.error(f"(API) Failed to get last token call usage: {e}")
-            return 0
-
-        if row and row[0] is not None:
-            return row[0]
-        else:
-            return 15000
         
+
     def get_database_names(self):
-        logger.info("(API) Fetching database names.")
+        #logger.info("(API) Fetching database names.")
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute("""
@@ -127,9 +104,10 @@ class UserRepository:
         except Exception as e:
             logger.error(f"(API) Failed to fetch database names: {e}")
             return []
-                
+        
+
     def get_uploaded_data(self, session_id: str) -> dict:
-        logger.info(f"(API) Fetching uploaded data for session: {session_id}") 
+        #logger.info(f"(API) Fetching uploaded data for session: {session_id}") 
         with self.conn.cursor() as cur:
             cur.execute(
                 "SELECT data, file_type, filename FROM uploaded_files WHERE session_id = %s ORDER BY upload_time DESC LIMIT 1",
@@ -146,37 +124,44 @@ class UserRepository:
                 return file_dict
 
             return None
-    
-    def get_user_by_username(self, username: str):
-        logger.info(f"(API) Fetching user by username: {username}")
+        
+    def insert_reset_code(self, user_id: str, reset_code: str):
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute("""
-                    SELECT username, full_name, email, location, last_login, hashed_password, disabled, role
-                    FROM users
-                    WHERE username = %s;
-                """, (username,))
-                row = cursor.fetchone()
-
-            if not row:
-                logger.warning(f"(API) User '{username}' not found.")
-                return None
-
-            # Create UserInDB-compatible dictionary
-            user_dict = {
-                "username": row[0],
-                "full_name": row[1],
-                "email": row[2],
-                "location": row[3],
-                "lastLogin": row[4].isoformat() if row[4] else None,
-                "hashed_password": row[5],
-                "disabled": row[6],
-                "role": row[7]
-            }
-            return user_dict  # Or `return UserInDB(**user_dict)` if you're using the Pydantic model directly
-
+                    INSERT INTO password_resets (user_id, reset_code, created_at, expires_at, type)
+                    VALUES (%s, %s, NOW(), NOW() + INTERVAL '15 minutes', 'password_reset')
+                    ON CONFLICT (user_id) 
+                    DO UPDATE SET reset_code = EXCLUDED.reset_code, 
+                                  created_at = EXCLUDED.created_at,
+                                  expires_at = EXCLUDED.expires_at;
+                """, (user_id, reset_code))
+                self.conn.commit()
+                return True
         except Exception as e:
-            logger.error(f"(API) Error fetching user '{username}': {e}")
+            logger.error(f"(API) Error inserting reset code for user '{user_id}': {e}")
+            return False
+        
+    def get_password_reset_obj(self, user_email: str):
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT u.email, p.reset_code, p.expires_at
+                    FROM password_resets p
+                    INNER JOIN users u ON u.id = p.user_id
+                    WHERE u.email = %s;
+                """, (user_email.lower(),))
+                row = cursor.fetchone()
+            if not row:
+                logger.error(f"(API) Cannot find password reset request code with email {user_email}")
+                return None
+            
+            request_dict = {
+                "email": row[0],
+                "reset_code": row[1],
+                "expires_at": row[2]
+            }
+            return request_dict
+        except Exception as e:
+            logger.error(f"(API) Error finding {user_email} in password reset table")
             return None
-
-    

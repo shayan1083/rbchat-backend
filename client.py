@@ -4,19 +4,18 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage 
-from langchain_core.rate_limiters import InMemoryRateLimiter
 import traceback
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 import time
 import openai
 import json
 
-from llm_logger import LLMLogger
-from settings import Settings
-from db_memory import get_session_history
+from custom_logging.llm_logger import LLMLogger
+from config.settings import Settings
+from database.db_memory import get_session_history
 from prompts import sql_generation_template
-from user_repository import UserRepository
-from file_upload import get_uploaded_data
+from repositories.metadata_repository import MetadataRepository
+from database.file_upload import get_uploaded_data
 
 
 settings = Settings()
@@ -25,24 +24,19 @@ logger = LLMLogger()
 
 
 model = ChatOpenAI(model="gpt-4.1", streaming=True, verbose=True, stream_usage=True)
-# tool = {"type": "web_search_preview"}
-# model = model.bind_tools([tool])
      
-async def run_agent(prompt: str, session_id: str = "default", db_name: str = settings.DB_NAME):   
+async def run_agent(prompt: str, session_id: str = "default", db_name: str = settings.DB_NAME, token: str = 'None'):   
     try:
         logger.info(f"Using LLM Model: {model.model_name}")
         logger.info(f"User Prompt: {prompt}")
         start_time = time.perf_counter()
-        async with streamablehttp_client(url=settings.MCP_SERVER_URL,headers={'db_name':db_name}) as (read, write, _):
+        async with streamablehttp_client(url=settings.MCP_SERVER_URL,headers={'db_name':db_name, 'Authorization': f'bearer {token}'}) as (read, write, _):
             async with ClientSession(read, write) as session:
                 setup_time = time.perf_counter()
                 await session.initialize()
 
                 tools = await load_mcp_tools(session)  
-                #web_search_tool = {"type": "web_search_preview"}
-                #all_tools = tools + [web_search_tool]
-
-                #model = model.bind_tools(web_search_tool)
+          
 
                 file_context = get_uploaded_data(session_id)
                 agent_prompt, combined_prompt = create_prompt(db_name, file_context)
@@ -108,7 +102,7 @@ def find_ratelimit_error(exc):
 
 def create_prompt(db_name: str, file_context: dict = None):
     """Format and update the agent prompt with table schema and file content"""
-    with UserRepository(dbname=db_name) as repo:
+    with MetadataRepository(dbname=db_name) as repo:
         schema_info = repo.get_tables_info()
 
     formatted_sql_prompt = sql_generation_template.format(

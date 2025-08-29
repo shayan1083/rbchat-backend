@@ -1,8 +1,8 @@
 import logging
 import psycopg2
 from datetime import datetime, timezone
-from settings import Settings
-from postgres_logging import PostgresHandler
+from config.settings import Settings
+from custom_logging.postgres_logging import PostgresHandler
 from langchain_core.messages import HumanMessage, AIMessage 
 import time
 from langchain_openai import ChatOpenAI

@@ -1,15 +1,12 @@
 from fastapi import UploadFile, HTTPException
-from settings import Settings
-from llm_logger import LLMLogger
+from config.settings import Settings
+from custom_logging.llm_logger import LLMLogger
 import json
 from pathlib import Path
-import pandas as pd
-import io
-import PyPDF2
-from settings import Settings
+from config.settings import Settings
 import psycopg2
 from datetime import datetime
-from user_repository import UserRepository
+from repositories.metadata_repository import MetadataRepository
 
 import numpy as np
 
@@ -59,7 +56,7 @@ async def process_file(file: UploadFile, session_id: str) -> dict:
     }
 
 def get_uploaded_data(session_id: str) -> dict:
-    with UserRepository() as repo:
+    with MetadataRepository() as repo:
         file_dict = repo.get_uploaded_data(session_id)
         return file_dict
 

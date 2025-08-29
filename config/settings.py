@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     ALGORITHM: str 
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
+    MAX_ACCOUNT_LOCK_RETRIES: int = 3
+
+    MAILERSEND_API_KEY: str
+
+    GOOGLE_APP_PASSWORD: str
+
+    SENDER_EMAIL: str
+
     @property
     def MCP_SERVER_URL(self) -> str:
         return f"http://{self.MCP_SERVER_HOST}:{self.MCP_SERVER_PORT}/mcp-server/mcp"

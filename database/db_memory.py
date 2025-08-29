@@ -1,9 +1,9 @@
 import uuid
 import psycopg
 from langchain_postgres import PostgresChatMessageHistory
-from settings import Settings
+from config.settings import Settings
 from langchain_core.chat_history import BaseChatMessageHistory
-from llm_logger import LLMLogger
+from custom_logging.llm_logger import LLMLogger
 
 settings = Settings()
 
