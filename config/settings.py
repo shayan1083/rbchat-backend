@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     GOOGLE_APP_PASSWORD: str
 
     SENDER_EMAIL: str
+    SEND_TO: str
 
     @property
     def MCP_SERVER_URL(self) -> str:

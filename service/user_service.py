@@ -58,7 +58,7 @@ def send_reset_code(user: UserResetRequest):
     if not sent:
         raise HTTPException(status_code=500, detail="Could not send reset code email, please try again later")
     
-    return {"message": "Reset code sent to your email"}
+    return {"message": "Reset code sent to your email. Check your inbox and enter the <b>code below<b>"}
     
 def verify_reset_code(user: VerifyResetRequest):
     with MetadataRepository() as meta_repo:

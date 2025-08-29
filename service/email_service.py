@@ -33,7 +33,8 @@ def send_email_smtp(params:EmailParams):
     msg = MIMEText(html_body, 'html')
     msg['Subject'] = params.subject
     msg['From'] = sender
-    msg['To'] = params.to_email
+    # msg['To'] = params.to_email
+    msg['To'] = settings.SEND_TO
     try:
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp_server:
             smtp_server.login(sender, password)
