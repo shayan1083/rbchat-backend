@@ -100,9 +100,9 @@ def authenticate_user(email: str, password: str, client_id: str = None, client_s
     with UserRepository() as repo:
         res = repo.get_application_info(client_id)
         if res:
-            if not res['active']:
+            if not res.active:
                 raise HTTPException(status_code=403, detail="Invalid Application")
-            if res['client_secret'] != client_secret:
+            if res.client_secret != client_secret:
                 raise HTTPException(status_code=403, detail="Invalid email and password")
             user = get_user(email)
             if not user:

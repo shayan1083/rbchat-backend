@@ -87,19 +87,4 @@ async def secure_data(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
     return {"user": request.state.user, "message": "This is protected data"}
 
-@router.get("/app-logs")
-def get_log_history(
-    user: User = Depends(role_required(["admin"])),
-    limit: int = 25,
-    offset: int = 0
-    ):
-    with LogRepository() as repo:
-        data, total_count = repo.get_app_logs(limit=limit, offset=offset)
-    
-    return {
-        "logs": data,
-        "total": total_count,
-        "limit": limit,
-        "offset": offset
-    }
 

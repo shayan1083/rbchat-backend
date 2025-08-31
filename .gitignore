@@ -15,3 +15,8 @@ venv
 *.log
 
 test.py
+
+
+.vscode/
+
+.pytest_cache/

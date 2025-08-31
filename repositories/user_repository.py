@@ -3,6 +3,7 @@ from config.settings import Settings
 from custom_logging.llm_logger import LLMLogger
 from models.models import User
 from utils.hash import hash_password
+from models.application_models import Application
 
 
 settings = Settings()
@@ -76,7 +77,7 @@ class UserRepository:
 
         
     def get_application_info(self, id: str):
-        #logger.info('(API) Fetching application info')
+        logger.info('(API) Fetching application info from database')
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute("""
@@ -86,17 +87,17 @@ class UserRepository:
                 """, (id,))
                 row = cursor.fetchone()
                 if row:
-                    return {
-                        "name": row[0],
-                        "description": row[1],
-                        "created_at": row[2],
-                        "updated_at": row[3],
-                        "active": row[4],
-                        "client_secret": row[5],
-                        "scope": row[6],
-                        "client_id": row[7],
-                        "allow_registration": row[8]
-                    }
+                    return Application(
+                        name=row[0],
+                        description=row[1],
+                        created_at=row[2],
+                        updated_at=row[3],
+                        active=row[4],
+                        client_secret=row[5],
+                        client_id=row[7],
+                        allow_registration=row[8],
+                        scope=row[6]
+                    )
                 else:
                     return None
         except Exception as e:

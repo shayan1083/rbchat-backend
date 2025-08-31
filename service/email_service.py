@@ -5,6 +5,7 @@ from jinja2 import Environment, FileSystemLoader
 import smtplib
 from email.mime.text import MIMEText
 from models.email_models import EmailType
+from models.application_models import Application
 
 
 settings = Settings()
@@ -20,13 +21,13 @@ template_map = {
     EmailType.PASSWORD_CHANGED: "password-changed.html"
 }
 
-def send_email_smtp(params:EmailParams):
+def send_email_smtp(params:EmailParams, app: Application):
     sender = settings.SENDER_EMAIL
     password = settings.GOOGLE_APP_PASSWORD
     template_file = template_map[params.email_type]
     if not template_file:
         raise ValueError(f"No template found for {params.email_type}")
-    
+    params.payload['app'] = app.name
     template = env.get_template(template_file)
     html_body = template.render(params.payload)
 

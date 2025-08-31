@@ -13,7 +13,7 @@ def register_user(user: UserSignup, ip: str = None):
     with UserRepository() as repo:
             client = repo.get_application_info(user.client_id)
 
-    if client and client['allow_registration'] and client['active']:                  
+    if client and client.allow_registration and client.active:                  
         try:
             with UserRepository() as repo:
                 if not repo.get_user_by_email(user.email):
@@ -22,15 +22,17 @@ def register_user(user: UserSignup, ip: str = None):
                     hashed_password = hash_password(user.password)
                     user_id = repo.register_user(email=user.email, password=hashed_password, location=ip, client_id=user.client_id)
                     print("inserted user in database")
+                    #convert user_id into encrypted string and pass it below
+                    encryptedUserID = "userid & clientid"
                     email_params = EmailParams(
                         to_email=user.email,
-                        subject="Registration Verification",
+                        subject="Registration Successful",
                         payload={
-                            "link": 'test_link'
+                            "link": 'http://www.zeesystems.com/confirm-email?id=encriptedstring',
                         },
                         email_type=EmailType.SIGNUP
                     )
-                    sent = send_email_smtp(email_params)
+                    sent = send_email_smtp(email_params, client)
                     print("sent email")
                     if sent:
                         return {'message': f'User {user_id} registered successfully'}
