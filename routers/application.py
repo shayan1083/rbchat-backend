@@ -14,4 +14,11 @@ def get_application(id: str):
     app = get_application_info_cached(id)
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
-    return app
+    
+    return  {
+            "name":app.name,
+            "description" : app.description,
+            "ids": [app.client_secret,app.client_id],
+            "allow_registration": app.allow_registration,
+            "scope": app.scope
+    }      

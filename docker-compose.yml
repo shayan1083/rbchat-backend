@@ -1,5 +1,8 @@
 version: '3.1'
 
+networks:
+  app-tier:
+    driver: bridge  
 services:
   db:
     image: postgres:latest
@@ -10,3 +13,23 @@ services:
       - ./config/.env
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+  zookeeper:
+    image: 'bitnami/zookeeper:latest'
+    ports:
+      - '2181:2181'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+  kafka:
+    image: 'bitnami/kafka:latest'
+    ports:
+      - '9092:9092'
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES= broker,controller
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP= PLAINTEXT:PLAINTEXT
+    depends_on:
+      - zookeeper

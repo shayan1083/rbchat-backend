@@ -51,7 +51,8 @@ class Settings(BaseSettings):
 
     @property
     def MCP_SERVER_URL(self) -> str:
-        return f"http://{self.MCP_SERVER_HOST}:{self.MCP_SERVER_PORT}/mcp-server/mcp"
+        # return f"http://{self.MCP_SERVER_HOST}:{self.MCP_SERVER_PORT}/mcp-server/mcp"
+        return f"{self.MCP_SERVER_HOST}"
 
     class Config:
         env_file = ".env"
